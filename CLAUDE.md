@@ -1,5 +1,48 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
+## Estado actual (última actualización: 2026-08-01)
+
+**Fase en curso: 4 — Configuración del proyecto, 🔵 en revisión.** Falta
+aprobación explícita del usuario para cerrarla y pasar a Fase 5.
+
+**GitHub conectado.** Repo remoto:
+https://github.com/Antonio-David-Tejada-Villalon/stock-c — rama local
+renombrada de `master` a `main` antes del push (convención actual de
+GitHub). `origin/main` está al día con el commit `5f50a9e — chore:
+scaffold monorepo (Fase 4 — configuración del proyecto)`. `gh` (GitHub
+CLI) sigue sin instalarse — no hizo falta, el repo se creó manualmente
+desde la web. CI (`.github/workflows/ci.yml`) corrió en el primer push y
+terminó en verde (`success`):
+https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30722101452
+
+**Pendiente inmediato:** aprobación explícita del usuario para cerrar la
+Fase 4 y pasar a Fase 5. Después de eso, crear los proyectos reales en
+Vercel/Render/Atlas/Upstash y conectar el repo (acción del usuario, no
+hecha todavía).
+
+**Stack y decisiones ya confirmadas por el usuario** (no volver a
+preguntar, solo verificar que sigan vigentes si algo no cuadra):
+- Arquitectura (Fase 1): monolito modular, Fastify, multiempresa por
+  `companyId` compartido (no DB-per-tenant), sincronización offline
+  híbrida (log de eventos para stock + LWW para datos maestros), modelo de
+  costo "gratis para desarrollar, pagar solo si crece".
+- Modelo de datos (Fase 3): un usuario = una empresa (sin membresías
+  multiempresa), `stockLevels` sincronizado transaccionalmente con
+  `stockMovements`.
+- Despliegue (decidido en Fase 4, actualiza lo dejado abierto en Fase 1):
+  **GitHub → Vercel** (`apps/web`) **+ Render** (`apps/api`) **+ MongoDB
+  Atlas** (base de datos) **+ Upstash** (Redis). Todo con tier gratuito
+  para empezar.
+- Monorepo pnpm + Turborepo ya scaffoldeado y verificado (`pnpm install` /
+  `lint` / `typecheck` / `build` en verde, API compilado responde en
+  `/health`). Detalle completo en
+  [docs/04-configuracion-proyecto.md](docs/04-configuracion-proyecto.md).
+
+**Próximo paso una vez aprobada la Fase 4:** Fase 5 — Autenticación (login,
+JWT, refresh token, roles, permisos, sesiones), sobre el modelo de `users`,
+`roles` y `sessions` ya definido en
+[docs/03-modelo-datos.md](docs/03-modelo-datos.md).
+
 ## Modo de trabajo (obligatorio, no negociable)
 
 Este proyecto se construye **por fases**, nunca completo de una vez. El prompt
