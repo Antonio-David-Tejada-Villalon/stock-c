@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: stock-c-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: .
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter @stock-c/api build
+    startCommand: pnpm --filter @stock-c/api start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: CORS_ORIGIN
+        sync: false # dominio de Vercel, se completa a mano en el dashboard de Render
+      - key: MONGODB_URI
+        sync: false # connection string de MongoDB Atlas
+      - key: REDIS_URL
+        sync: false # connection string de Upstash (o el proveedor de Redis elegido)
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
