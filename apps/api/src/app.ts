@@ -9,6 +9,7 @@ import { jwtPlugin } from "./plugins/jwt.js";
 import { cookiePlugin } from "./plugins/cookie.js";
 import { rateLimitPlugin } from "./plugins/rateLimit.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
+import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 
 export interface BuildAppOptions {
   /** Inyección para tests — evita depender de un Redis real. */
@@ -37,6 +38,7 @@ export async function buildApp(options: BuildAppOptions = {}) {
 
   await app.register(healthPlugin);
   await app.register(authRoutes);
+  await app.register(dashboardRoutes);
 
   return app;
 }

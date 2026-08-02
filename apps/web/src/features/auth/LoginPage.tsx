@@ -1,21 +1,9 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { Button } from "@stock-c/ui";
 import { useAuth } from "./AuthContext";
 import { ApiAuthError } from "./api";
-
-const tokens = {
-  accent: "#4453F0",
-  accentHover: "#3641D6",
-  border: "#E3E3EC",
-  borderStrong: "#C7C7D6",
-  text: "#14161A",
-  textSecondary: "#53566B",
-  textTertiary: "#8A8DA1",
-  danger: "#D6423C",
-  dangerWash: "#FCECEB",
-  bgSunken: "#F1F1F6",
-};
 
 export function LoginPage() {
   const { login, status } = useAuth();
@@ -50,50 +38,21 @@ export function LoginPage() {
   }
 
   return (
-    <main
-      style={{
-        display: "grid",
-        placeItems: "center",
-        minHeight: "100vh",
-        background: tokens.bgSunken,
-        fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      }}
-    >
+    <main className="grid min-h-screen place-items-center bg-bg-sunken font-sans text-text">
       <form
         onSubmit={handleSubmit}
-        style={{
-          width: 320,
-          background: "#fff",
-          border: `1px solid ${tokens.border}`,
-          borderRadius: 12,
-          padding: 32,
-          boxShadow: "0 8px 24px rgba(20,22,40,0.10)",
-        }}
+        className="w-80 rounded-lg border border-border bg-bg-raised p-8 shadow-lg"
       >
-        <div style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 24 }}>
-          <span
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              background: tokens.accent,
-              color: "#fff",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 12,
-              fontWeight: 700,
-            }}
-          >
+        <div className="mb-6 flex items-center justify-center gap-2">
+          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-accent text-xs font-bold text-accent-contrast">
             S
           </span>
-          <strong style={{ fontSize: 15 }}>STOCK-C</strong>
+          <strong className="text-[15px]">STOCK-C</strong>
         </div>
-        <h1 style={{ fontSize: 16, textAlign: "center", margin: "0 0 4px" }}>Iniciar sesión</h1>
-        <p style={{ fontSize: 12, color: tokens.textTertiary, textAlign: "center", margin: "0 0 24px" }}>
-          Accedé a tu empresa
-        </p>
+        <h1 className="mb-1 text-center text-base font-semibold text-text">Iniciar sesión</h1>
+        <p className="mb-6 text-center text-xs text-text-tertiary">Accedé a tu empresa</p>
 
-        <label style={fieldLabelStyle} htmlFor="email">
+        <label className="mb-1.5 block text-xs font-semibold text-text-secondary" htmlFor="email">
           Correo
         </label>
         <input
@@ -103,10 +62,13 @@ export function LoginPage() {
           autoComplete="username"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          style={inputStyle}
+          className="w-full rounded-md border border-border-strong bg-bg-raised px-2.5 py-2 text-[13px] text-text"
         />
 
-        <label style={{ ...fieldLabelStyle, marginTop: 16 }} htmlFor="password">
+        <label
+          className="mb-1.5 mt-4 block text-xs font-semibold text-text-secondary"
+          htmlFor="password"
+        >
           Contraseña
         </label>
         <input
@@ -116,61 +78,19 @@ export function LoginPage() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={inputStyle}
+          className="w-full rounded-md border border-border-strong bg-bg-raised px-2.5 py-2 text-[13px] text-text"
         />
 
         {error && (
-          <p
-            role="alert"
-            style={{
-              marginTop: 12,
-              fontSize: 12,
-              color: tokens.danger,
-              background: tokens.dangerWash,
-              padding: "8px 10px",
-              borderRadius: 8,
-            }}
-          >
+          <p role="alert" className="mt-3 rounded-md bg-danger-wash px-2.5 py-2 text-xs text-danger">
             {error}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          style={{
-            width: "100%",
-            marginTop: 20,
-            padding: "8px 14px",
-            borderRadius: 8,
-            border: "none",
-            background: submitting ? tokens.borderStrong : tokens.accent,
-            color: "#fff",
-            fontWeight: 600,
-            fontSize: 13,
-            cursor: submitting ? "default" : "pointer",
-          }}
-        >
+        <Button type="submit" disabled={submitting} className="mt-5 w-full justify-center">
           {submitting ? "Entrando…" : "Entrar"}
-        </button>
+        </Button>
       </form>
     </main>
   );
 }
-
-const fieldLabelStyle = {
-  display: "block",
-  fontSize: 12,
-  fontWeight: 600,
-  color: tokens.textSecondary,
-  marginBottom: 6,
-};
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box" as const,
-  fontSize: 13,
-  padding: "8px 10px",
-  borderRadius: 8,
-  border: `1px solid ${tokens.borderStrong}`,
-};

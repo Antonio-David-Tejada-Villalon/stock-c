@@ -2,30 +2,48 @@
 
 ## Estado actual (última actualización: 2026-08-02)
 
-**Fase en curso: 6 — Dashboard principal, 🔵 en curso.** Fases 1-5
+**Fase en curso: 7 — CRUD de productos, aún no arrancada.** Fases 1-6
 aprobadas.
 
-**Fase 5 (Autenticación) — resumen** (detalle completo en
-[docs/05-autenticacion.md](docs/05-autenticacion.md)): login, refresh token
-rotativo con detección de reuso, logout, `GET /auth/me`, RBAC por
-permisos, aislamiento multiempresa forzado a nivel de Mongoose
-(`apps/api/src/db/plugins/tenantScope.ts`), rate limiting en login,
-mitigación CSRF con header custom. Frontend: `AuthContext` (access token
-solo en memoria), `LoginPage`, `ProtectedRoute`, `react-router-dom`. Seed
-idempotente en `apps/api/src/db/seed.ts` (sin registro público — decisión
-explícita). Verificado con 11 tests automatizados (encontraron y
-corrigieron un bug real de `@fastify/rate-limit`) y además probado en vivo
-por el usuario en el navegador contra infraestructura real.
+**Fase 6 (Dashboard principal) — resumen** (detalle completo en
+[docs/06-dashboard.md](docs/06-dashboard.md)): shell autenticado completo
+(sidebar + topbar + selector de empresa + menú de usuario), pantalla de
+Dashboard con KPIs reales (sucursales, usuarios) y estados vacíos honestos
+para lo que todavía no existe (productos, stock, movimientos — Fases 7-9).
+Arrancó en código el sistema de diseño (`packages/ui`, sobre **Tailwind
+CSS v4 + Radix UI + class-variance-authority**, ya decidido en Fase 1):
+`Button`, `Avatar`, `Badge`, `EmptyState`, `StatCard`, `Sidebar`, `Topbar`,
+`UserMenu`. Rutas placeholder (`ComingSoon`) para las secciones que llegan
+después, nunca enlaces rotos. 13 tests de backend en verde (11 de Fase 5 +
+2 nuevos de `/dashboard/summary`).
+
+**Bug real encontrado y corregido en esta fase** (lo notó el usuario en el
+navegador, no yo): `LoginPage` (Fase 5) tenía el fondo de la tarjeta
+hardcodeado en blanco pero el texto heredaba el color del body, que ahora
+sigue el tema claro/oscuro del sistema — con el SO en modo oscuro, el
+texto se volvía casi invisible sobre el fondo blanco. Se corrigió
+migrando `LoginPage` a los tokens/componentes nuevos (fondo y texto ahora
+siempre sincronizados al mismo tema). Se confirmó por grep que no queda
+ningún otro color hardcodeado fuera del sistema de tokens en
+`apps/web/src`.
+
+**Nota operativa:** durante la verificación en navegador de esta fase,
+maté por error un par de procesos de Node al intentar levantar servidores
+de prueba — pueden haber sido la sesión `pnpm dev` que el usuario tenía
+abierta. Se avisó en el momento y se resolvió reiniciando; no hubo pérdida
+de código ni de datos, pero vale la pena tenerlo presente: en esta máquina
+suele haber varios procesos `node.exe` sueltos acumulados de sesiones
+anteriores — conviene `netstat -ano | grep LISTENING` antes de matar
+procesos a ciegas.
 
 **Cuentas reales ya creadas** (adelantando parte de Fase 4/15): **MongoDB
 Atlas** (cluster `Cluster0`) y **Upstash Redis** (base `stock-c-dev`,
 Oregon). Credenciales en `apps/api/.env`, gitignored, nunca se subieron a
 GitHub. Faltan **Vercel** y **Render**.
 
-**Pendiente:** el trabajo de Fase 5 (mucho código nuevo: modelos, plugins,
-módulo auth, tests, frontend) **todavía no tiene commit** — no se hizo
-porque no se pidió explícitamente. Confirmar con el usuario si lo
-commiteamos antes o junto con el avance de Fase 6.
+**Pendiente inmediato:** el trabajo de Fase 6 (packages/ui, Tailwind,
+AppShell, Dashboard, tests) **todavía no tiene commit** — confirmar con el
+usuario antes de arrancar Fase 7.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -48,15 +66,18 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   esquema completo de doble submit (justificación en docs/05, sección 3).
   React Router elegido para el enrutamiento (no se había decidido antes).
 - Monorepo pnpm + Turborepo scaffoldeado y verificado (`pnpm install` /
-  `lint` / `typecheck` / `build` en verde). Detalle completo en
+  `lint` / `typecheck` / `build` / `test` en verde). Detalle completo en
   [docs/04-configuracion-proyecto.md](docs/04-configuracion-proyecto.md).
+- Sistema de diseño (Fase 6): Tailwind CSS v4 + Radix UI +
+  class-variance-authority en `packages/ui`, tokens de Fase 2 como
+  variables CSS en `packages/ui/tokens.css`. Componentes se agregan solo
+  cuando una pantalla real los necesita, no todo el catálogo de una.
 
-**En construcción ahora:** Fase 6 — Dashboard principal (solo dashboard,
-nada más), sobre el shell de sidebar/topbar ya diseñado en
-[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md), reemplazando el
-`AppHome` placeholder actual. Ojo: Productos/Inventario todavía no existen
-(son Fases 7-9), así que el dashboard va a mostrar KPIs en cero/estado
-vacío, no datos reales — se explica como asunción en docs/06.
+**Próximo paso:** Fase 7 — CRUD de productos (solo productos, sin stock
+todavía), sobre el modelo `products` ya definido en
+[docs/03-modelo-datos.md](docs/03-modelo-datos.md) y los componentes de
+formulario/tabla diseñados en
+[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md).
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -112,7 +133,7 @@ accesibilidad WCAG 2.2 AA.
 | 3 | Modelo de datos MongoDB (sin código) | ✅ aprobada |
 | 4 | Configuración del proyecto (repo, carpetas, linting, Docker, envs) | ✅ aprobada |
 | 5 | Autenticación (JWT, refresh, roles, permisos, sesiones) | ✅ aprobada |
-| 6 | Dashboard principal | 🔵 en curso |
+| 6 | Dashboard principal | ✅ aprobada |
 | 7 | CRUD de productos | ⚪ pendiente |
 | 8 | Categorías, marcas, unidades | ⚪ pendiente |
 | 9 | Control de inventario (entradas, salidas, kardex) | ⚪ pendiente |

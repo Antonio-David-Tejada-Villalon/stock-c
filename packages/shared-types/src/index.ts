@@ -33,3 +33,8 @@ export const PERMISSIONS = {
 } as const;
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export interface DashboardSummary {
+  branchCount: number;
+  activeUserCount: number;
+}
