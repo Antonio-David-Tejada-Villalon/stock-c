@@ -41,9 +41,11 @@ Atlas** (cluster `Cluster0`) y **Upstash Redis** (base `stock-c-dev`,
 Oregon). Credenciales en `apps/api/.env`, gitignored, nunca se subieron a
 GitHub. Faltan **Vercel** y **Render**.
 
-**Pendiente inmediato:** el trabajo de Fase 6 (packages/ui, Tailwind,
-AppShell, Dashboard, tests) **todavía no tiene commit** — confirmar con el
-usuario antes de arrancar Fase 7.
+**Commit y push de Fase 6 hechos** (`ebede6b — feat: dashboard principal y
+sistema de diseño en código (Fase 6)`), CI en verde:
+https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30735451338
+
+**Pendiente inmediato:** aprobar y arrancar Fase 7 — CRUD de productos.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
