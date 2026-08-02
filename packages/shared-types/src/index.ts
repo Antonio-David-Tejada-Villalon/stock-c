@@ -1,10 +1,35 @@
-// Placeholder — los tipos de dominio (Product, StockMovement, etc.) se
-// agregan a partir de la Fase 7 en adelante, sobre el modelo definido en
-// docs/03-modelo-datos.md. Este paquete existe desde ya para que
-// apps/web y apps/api compartan tipos sin duplicarlos.
+// Tipos compartidos entre apps/web y apps/api. Los tipos de dominio de
+// inventario (Product, StockMovement, etc.) se agregan a partir de la
+// Fase 7 en adelante, sobre el modelo definido en docs/03-modelo-datos.md.
 
 export interface HealthStatus {
   status: "ok" | "error";
   service: string;
   timestamp: string;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  companyId: string;
+  role: {
+    id: string;
+    name: string;
+    permissions: string[];
+  };
+  branchRestrictions: string[];
+}
+
+// Strings libres, no enum cerrado — ver docs/03-modelo-datos.md, colección
+// `roles`: módulos futuros pueden registrar permisos nuevos sin migrar.
+export const PERMISSIONS = {
+  PRODUCT_CREATE: "product:create",
+  PRODUCT_UPDATE: "product:update",
+  PRODUCT_DELETE: "product:delete",
+  INVENTORY_MOVEMENT_CREATE: "inventory:movement:create",
+  USER_MANAGE: "user:manage",
+  ROLE_MANAGE: "role:manage",
+} as const;
+
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

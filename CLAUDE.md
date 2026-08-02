@@ -1,24 +1,31 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
-## Estado actual (última actualización: 2026-08-01)
+## Estado actual (última actualización: 2026-08-02)
 
-**Fase en curso: 4 — Configuración del proyecto, 🔵 en revisión.** Falta
-aprobación explícita del usuario para cerrarla y pasar a Fase 5.
+**Fase en curso: 6 — Dashboard principal, 🔵 en curso.** Fases 1-5
+aprobadas.
 
-**GitHub conectado.** Repo remoto:
-https://github.com/Antonio-David-Tejada-Villalon/stock-c — rama local
-renombrada de `master` a `main` antes del push (convención actual de
-GitHub). `origin/main` está al día con el commit `5f50a9e — chore:
-scaffold monorepo (Fase 4 — configuración del proyecto)`. `gh` (GitHub
-CLI) sigue sin instalarse — no hizo falta, el repo se creó manualmente
-desde la web. CI (`.github/workflows/ci.yml`) corrió en el primer push y
-terminó en verde (`success`):
-https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30722101452
+**Fase 5 (Autenticación) — resumen** (detalle completo en
+[docs/05-autenticacion.md](docs/05-autenticacion.md)): login, refresh token
+rotativo con detección de reuso, logout, `GET /auth/me`, RBAC por
+permisos, aislamiento multiempresa forzado a nivel de Mongoose
+(`apps/api/src/db/plugins/tenantScope.ts`), rate limiting en login,
+mitigación CSRF con header custom. Frontend: `AuthContext` (access token
+solo en memoria), `LoginPage`, `ProtectedRoute`, `react-router-dom`. Seed
+idempotente en `apps/api/src/db/seed.ts` (sin registro público — decisión
+explícita). Verificado con 11 tests automatizados (encontraron y
+corrigieron un bug real de `@fastify/rate-limit`) y además probado en vivo
+por el usuario en el navegador contra infraestructura real.
 
-**Pendiente inmediato:** aprobación explícita del usuario para cerrar la
-Fase 4 y pasar a Fase 5. Después de eso, crear los proyectos reales en
-Vercel/Render/Atlas/Upstash y conectar el repo (acción del usuario, no
-hecha todavía).
+**Cuentas reales ya creadas** (adelantando parte de Fase 4/15): **MongoDB
+Atlas** (cluster `Cluster0`) y **Upstash Redis** (base `stock-c-dev`,
+Oregon). Credenciales en `apps/api/.env`, gitignored, nunca se subieron a
+GitHub. Faltan **Vercel** y **Render**.
+
+**Pendiente:** el trabajo de Fase 5 (mucho código nuevo: modelos, plugins,
+módulo auth, tests, frontend) **todavía no tiene commit** — no se hizo
+porque no se pidió explícitamente. Confirmar con el usuario si lo
+commiteamos antes o junto con el avance de Fase 6.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -32,16 +39,24 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
 - Despliegue (decidido en Fase 4, actualiza lo dejado abierto en Fase 1):
   **GitHub → Vercel** (`apps/web`) **+ Render** (`apps/api`) **+ MongoDB
   Atlas** (base de datos) **+ Upstash** (Redis). Todo con tier gratuito
-  para empezar.
-- Monorepo pnpm + Turborepo ya scaffoldeado y verificado (`pnpm install` /
-  `lint` / `typecheck` / `build` en verde, API compilado responde en
-  `/health`). Detalle completo en
+  para empezar. **Atlas y Upstash ya tienen cuenta real creada** (cluster
+  `Cluster0` / base `stock-c-dev`, credenciales en `apps/api/.env`
+  gitignored) — faltan Vercel y Render.
+- Autenticación (Fase 5): access token JWT 15min + refresh opaco rotativo
+  en cookie httpOnly `SameSite=None` (necesario porque Vercel/Render son
+  dominios distintos) + CSRF mitigado con header custom en vez de un
+  esquema completo de doble submit (justificación en docs/05, sección 3).
+  React Router elegido para el enrutamiento (no se había decidido antes).
+- Monorepo pnpm + Turborepo scaffoldeado y verificado (`pnpm install` /
+  `lint` / `typecheck` / `build` en verde). Detalle completo en
   [docs/04-configuracion-proyecto.md](docs/04-configuracion-proyecto.md).
 
-**Próximo paso una vez aprobada la Fase 4:** Fase 5 — Autenticación (login,
-JWT, refresh token, roles, permisos, sesiones), sobre el modelo de `users`,
-`roles` y `sessions` ya definido en
-[docs/03-modelo-datos.md](docs/03-modelo-datos.md).
+**En construcción ahora:** Fase 6 — Dashboard principal (solo dashboard,
+nada más), sobre el shell de sidebar/topbar ya diseñado en
+[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md), reemplazando el
+`AppHome` placeholder actual. Ojo: Productos/Inventario todavía no existen
+(son Fases 7-9), así que el dashboard va a mostrar KPIs en cero/estado
+vacío, no datos reales — se explica como asunción en docs/06.
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -95,9 +110,9 @@ accesibilidad WCAG 2.2 AA.
 | 1 | Arquitectura completa del proyecto | ✅ aprobada |
 | 2 | Diseño UI/UX completo (sistema de diseño, sin código) | ✅ aprobada |
 | 3 | Modelo de datos MongoDB (sin código) | ✅ aprobada |
-| 4 | Configuración del proyecto (repo, carpetas, linting, Docker, envs) | 🔵 en revisión |
-| 5 | Autenticación (JWT, refresh, roles, permisos, sesiones) | ⚪ pendiente |
-| 6 | Dashboard principal | ⚪ pendiente |
+| 4 | Configuración del proyecto (repo, carpetas, linting, Docker, envs) | ✅ aprobada |
+| 5 | Autenticación (JWT, refresh, roles, permisos, sesiones) | ✅ aprobada |
+| 6 | Dashboard principal | 🔵 en curso |
 | 7 | CRUD de productos | ⚪ pendiente |
 | 8 | Categorías, marcas, unidades | ⚪ pendiente |
 | 9 | Control de inventario (entradas, salidas, kardex) | ⚪ pendiente |
