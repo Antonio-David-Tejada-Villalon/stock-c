@@ -1,51 +1,43 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
-## Estado actual (última actualización: 2026-08-02)
+## Estado actual (última actualización: 2026-08-05)
 
-**Fase en curso: 7 — CRUD de productos, aún no arrancada.** Fases 1-6
-aprobadas.
+**Fase en curso: 8 — Categorías, marcas, unidades, aún no arrancada.**
+Fases 1-7 aprobadas.
 
-**Fase 6 (Dashboard principal) — resumen** (detalle completo en
-[docs/06-dashboard.md](docs/06-dashboard.md)): shell autenticado completo
-(sidebar + topbar + selector de empresa + menú de usuario), pantalla de
-Dashboard con KPIs reales (sucursales, usuarios) y estados vacíos honestos
-para lo que todavía no existe (productos, stock, movimientos — Fases 7-9).
-Arrancó en código el sistema de diseño (`packages/ui`, sobre **Tailwind
-CSS v4 + Radix UI + class-variance-authority**, ya decidido en Fase 1):
-`Button`, `Avatar`, `Badge`, `EmptyState`, `StatCard`, `Sidebar`, `Topbar`,
-`UserMenu`. Rutas placeholder (`ComingSoon`) para las secciones que llegan
-después, nunca enlaces rotos. 13 tests de backend en verde (11 de Fase 5 +
-2 nuevos de `/dashboard/summary`).
+**Fase 7 (CRUD de productos) — resumen** (detalle completo en
+[docs/07-productos.md](docs/07-productos.md)): CRUD completo (crear,
+listar con búsqueda y **paginación por cursor** tipo *seek*, editar con
+**concurrencia optimista**, desactivar sin borrar — nunca stock, eso es
+Fase 9). `categoryId`/`brandId`/`unitId` del modelo de Fase 3 se
+relajaron a **opcionales** por decisión explícita del usuario (Categorías/
+Marcas/Unidades recién llegan en Fase 8; no tenía sentido pedirlos ahora).
+Primer uso real de `authorize()` (escrito en Fase 5, sin consumidor hasta
+ahora) — botones de crear/editar/desactivar se ocultan en el frontend
+según permisos del usuario. `packages/ui` suma `Input`, `Textarea`,
+`FormField`, `Switch`, `Table`/`Th`/`Td`, `Pagination`, `Drawer` (panel
+lateral con Radix `Dialog`) — reutilizables para Fase 8 en adelante.
+21 tests de backend en verde (11 Fase 5 + 2 Fase 6 + 8 Fase 7).
 
-**Bug real encontrado y corregido en esta fase** (lo notó el usuario en el
-navegador, no yo): `LoginPage` (Fase 5) tenía el fondo de la tarjeta
-hardcodeado en blanco pero el texto heredaba el color del body, que ahora
-sigue el tema claro/oscuro del sistema — con el SO en modo oscuro, el
-texto se volvía casi invisible sobre el fondo blanco. Se corrigió
-migrando `LoginPage` a los tokens/componentes nuevos (fondo y texto ahora
-siempre sincronizados al mismo tema). Se confirmó por grep que no queda
-ningún otro color hardcodeado fuera del sistema de tokens en
-`apps/web/src`.
-
-**Nota operativa:** durante la verificación en navegador de esta fase,
-maté por error un par de procesos de Node al intentar levantar servidores
-de prueba — pueden haber sido la sesión `pnpm dev` que el usuario tenía
-abierta. Se avisó en el momento y se resolvió reiniciando; no hubo pérdida
-de código ni de datos, pero vale la pena tenerlo presente: en esta máquina
-suele haber varios procesos `node.exe` sueltos acumulados de sesiones
-anteriores — conviene `netstat -ano | grep LISTENING` antes de matar
-procesos a ciegas.
+**Incidente real durante la verificación de esta fase** (infraestructura,
+no código): al levantar el API para probar en navegador, `mongoPlugin` no
+conectaba a Atlas — TCP abría pero el handshake TLS se cortaba con
+`SSL alert: internal error` en los tres nodos del cluster. Se descartó
+whitelist de IP (confirmada activa), cambio de red y antivirus con
+inspección SSL; se resolvió solo después de un rato, consistente con
+mantenimiento/propagación transitoria del lado de Atlas. Si vuelve a
+pasar: el error genérico de Fastify (`AVV_ERR_PLUGIN_EXEC_TIMEOUT`) no
+dice la causa real — conectar aparte con `serverSelectionTimeoutMS` alto
+para ver el error de TLS/red real.
 
 **Cuentas reales ya creadas** (adelantando parte de Fase 4/15): **MongoDB
-Atlas** (cluster `Cluster0`) y **Upstash Redis** (base `stock-c-dev`,
-Oregon). Credenciales en `apps/api/.env`, gitignored, nunca se subieron a
-GitHub. Faltan **Vercel** y **Render**.
+Atlas** (cluster `Cluster0`, Network Access con `0.0.0.0/0` para no
+depender de IP fija en desarrollo) y **Upstash Redis** (base
+`stock-c-dev`, Oregon). Credenciales en `apps/api/.env`, gitignored,
+nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 
-**Commit y push de Fase 6 hechos** (`ebede6b — feat: dashboard principal y
-sistema de diseño en código (Fase 6)`), CI en verde:
-https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30735451338
-
-**Pendiente inmediato:** aprobar y arrancar Fase 7 — CRUD de productos.
+**Pendiente inmediato:** confirmar con el usuario si se commitea y
+pushea el trabajo de Fase 7 antes de arrancar Fase 8.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -74,12 +66,16 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   class-variance-authority en `packages/ui`, tokens de Fase 2 como
   variables CSS en `packages/ui/tokens.css`. Componentes se agregan solo
   cuando una pantalla real los necesita, no todo el catálogo de una.
+- Productos (Fase 7): `categoryId`/`brandId`/`unitId` son opcionales en el
+  modelo (no obligatorios como decía Fase 3 originalmente) porque
+  Categorías/Marcas/Unidades todavía no existen — se completan
+  retroactivamente cuando exista Fase 8.
 
-**Próximo paso:** Fase 7 — CRUD de productos (solo productos, sin stock
-todavía), sobre el modelo `products` ya definido en
-[docs/03-modelo-datos.md](docs/03-modelo-datos.md) y los componentes de
-formulario/tabla diseñados en
-[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md).
+**Próximo paso:** Fase 8 — Categorías, marcas, unidades (solo eso), sobre
+el modelo ya definido en
+[docs/03-modelo-datos.md](docs/03-modelo-datos.md). Al cerrarla, conviene
+volver al formulario de productos (Fase 7) para agregar los selectores de
+categoría/marca/unidad que hoy no se muestran.
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -136,7 +132,7 @@ accesibilidad WCAG 2.2 AA.
 | 4 | Configuración del proyecto (repo, carpetas, linting, Docker, envs) | ✅ aprobada |
 | 5 | Autenticación (JWT, refresh, roles, permisos, sesiones) | ✅ aprobada |
 | 6 | Dashboard principal | ✅ aprobada |
-| 7 | CRUD de productos | ⚪ pendiente |
+| 7 | CRUD de productos | ✅ aprobada |
 | 8 | Categorías, marcas, unidades | ⚪ pendiente |
 | 9 | Control de inventario (entradas, salidas, kardex) | ⚪ pendiente |
 | 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ⚪ pendiente |

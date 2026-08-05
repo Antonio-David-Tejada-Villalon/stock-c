@@ -38,3 +38,23 @@ export interface DashboardSummary {
   branchCount: number;
   activeUserCount: number;
 }
+
+export interface Product {
+  id: string;
+  sku: string;
+  name: string;
+  description?: string;
+  barcode?: string;
+  /** String decimal, nunca number — ver docs/07-productos.md, sección 2. */
+  price: string;
+  cost?: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductListResponse {
+  items: Product[];
+  nextCursor: string | null;
+}

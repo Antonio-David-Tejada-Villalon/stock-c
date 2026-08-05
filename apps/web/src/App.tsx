@@ -4,6 +4,7 @@ import { LoginPage } from "./features/auth/LoginPage";
 import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import { AppShell } from "./app/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
+import { ProductsPage } from "./pages/ProductsPage";
 import { ComingSoon } from "./pages/ComingSoon";
 
 export function App() {
@@ -20,10 +21,7 @@ export function App() {
             }
           >
             <Route index element={<DashboardPage />} />
-            <Route
-              path="/productos"
-              element={<ComingSoon title="Productos" phase="Fase 7" />}
-            />
+            <Route path="/productos" element={<ProductsPage />} />
             <Route
               path="/movimientos"
               element={<ComingSoon title="Movimientos" phase="Fase 9" />}
