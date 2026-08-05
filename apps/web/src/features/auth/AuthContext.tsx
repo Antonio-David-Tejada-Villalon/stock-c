@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from "react";
 import type { AuthUser } from "@stock-c/shared-types";
 import { loginRequest, logoutRequest, meRequest, refreshRequest, ApiAuthError } from "./api";
+import { clearOfflineData } from "../../offline/db";
 
 interface AuthState {
   user: AuthUser | null;
@@ -45,6 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     await logoutRequest().catch(() => undefined);
+    // Sin esto, el caché offline de esta empresa podría quedar visible si
+    // otro usuario (de otra empresa) inicia sesión después en este mismo
+    // dispositivo — ver docs/10-offline-first.md, sección 7.
+    await clearOfflineData().catch(() => undefined);
     setState({ user: null, accessToken: null, status: "unauthenticated" });
   }, []);
 

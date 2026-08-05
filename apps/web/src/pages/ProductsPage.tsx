@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
-import { Badge, Button, EmptyState, Input, Pagination, Table, Td, Th } from "@stock-c/ui";
+import { useEffect, useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { Badge, Button, EmptyState, Input, Table, Td, Th } from "@stock-c/ui";
 import { PERMISSIONS, type Brand, type Category, type Product, type Unit } from "@stock-c/shared-types";
 import { useAuth } from "../features/auth/AuthContext";
 import { listBrands, listCategories, listUnits } from "../features/catalogs/api";
-import { getStockLevels } from "../features/inventory/api";
 import { KardexDrawer } from "../features/inventory/KardexDrawer";
-import { deactivateProduct, listProducts } from "../features/products/api";
+import { deactivateProduct } from "../features/products/api";
 import { ProductFormDrawer } from "../features/products/ProductFormDrawer";
-
-const PAGE_SIZE = 20;
+import { db } from "../offline/db";
+import { useOfflineSync } from "../offline/useOfflineSync";
 
 function formatMoney(value: string): string {
   const n = Number(value);
@@ -24,84 +24,51 @@ function formatQty(value: string): string {
 
 export function ProductsPage() {
   const { accessToken, user } = useAuth();
+  const { online, sync } = useOfflineSync(accessToken);
   const permissions = user?.role.permissions ?? [];
   const canCreate = permissions.includes(PERMISSIONS.PRODUCT_CREATE);
   const canUpdate = permissions.includes(PERMISSIONS.PRODUCT_UPDATE);
   const canDelete = permissions.includes(PERMISSIONS.PRODUCT_DELETE);
-  const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
-  const [cursorStack, setCursorStack] = useState<string[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Product | undefined>(undefined);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
-  const [stockByProduct, setStockByProduct] = useState<Record<string, string>>({});
   const [kardexProduct, setKardexProduct] = useState<Product | undefined>(undefined);
   const [kardexOpen, setKardexOpen] = useState(false);
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken || !online) return;
     void listCategories(accessToken).then((res) => setCategories(res.items));
     void listBrands(accessToken).then((res) => setBrands(res.items));
     void listUnits(accessToken).then((res) => setUnits(res.items));
-  }, [accessToken]);
+  }, [accessToken, online]);
 
-  const load = useCallback(async () => {
-    if (!accessToken) return;
-    setLoading(true);
-    try {
-      const res = await listProducts(accessToken, {
-        cursor,
-        limit: PAGE_SIZE,
-        q: search || undefined,
-      });
-      setItems(res.items);
-      setNextCursor(res.nextCursor);
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, cursor, search]);
+  // Catálogo cacheado localmente (Fase 10) — ya no se pagina por cursor
+  // contra el servidor: el caché completo ya está en memoria vía Dexie,
+  // así que "paginar" un array que ya está local no cumple ningún
+  // propósito (la paginación por cursor existía para evitar skip/limit
+  // en una consulta remota, no aplica acá). Se filtra y ordena en el
+  // cliente.
+  const allProducts = useLiveQuery(() => db.products.orderBy("name").toArray(), []) ?? [];
+  const stockLevels = useLiveQuery(() => db.stockLevels.toArray(), []) ?? [];
+  const stockByProduct = useMemo(
+    () => Object.fromEntries(stockLevels.map((s) => [s.productId, s.quantity])),
+    [stockLevels],
+  );
 
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    if (!accessToken || items.length === 0) return;
-    void getStockLevels(
-      accessToken,
-      items.map((p) => p.id),
-    ).then((res) => {
-      setStockByProduct(Object.fromEntries(res.items.map((s) => [s.productId, s.quantity])));
-    });
-  }, [accessToken, items]);
-
-  useEffect(() => {
-    const id = setTimeout(() => {
-      setCursorStack([]);
-      setCursor(null);
-    }, 300);
-    return () => clearTimeout(id);
-  }, [search]);
-
-  function handleNext() {
-    if (!nextCursor) return;
-    setCursorStack((stack) => [...stack, cursor ?? ""]);
-    setCursor(nextCursor);
-  }
-
-  function handlePrev() {
-    setCursorStack((stack) => {
-      const copy = [...stack];
-      const prev = copy.pop() ?? null;
-      setCursor(prev || null);
-      return copy;
-    });
-  }
+  const items = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allProducts;
+    return allProducts.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        (p.barcode ?? "").toLowerCase().includes(q),
+    );
+  }, [allProducts, search]);
 
   function openCreate() {
     setEditing(undefined);
@@ -119,21 +86,29 @@ export function ProductsPage() {
   }
 
   function handleSaved() {
-    void load();
+    void sync();
   }
 
   async function handleDeactivate(product: Product) {
     if (!accessToken) return;
     if (!confirm(`¿Desactivar "${product.name}"? Podés reactivarlo después editándolo.`)) return;
     await deactivateProduct(accessToken, product.id);
-    void load();
+    void sync();
   }
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Productos</h1>
-        {canCreate && <Button onClick={openCreate}>Nuevo producto</Button>}
+        {canCreate && (
+          <Button
+            onClick={openCreate}
+            disabled={!online}
+            title={online ? undefined : "Necesitás conexión para crear productos"}
+          >
+            Nuevo producto
+          </Button>
+        )}
       </div>
 
       <Input
@@ -143,86 +118,89 @@ export function ProductsPage() {
         className="max-w-sm"
       />
 
-      {!loading && items.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState
           title={search ? "Sin resultados" : "Todavía no hay productos"}
-          description={search ? "Probá con otra búsqueda." : "Creá el primero con el botón de arriba."}
+          description={
+            search
+              ? "Probá con otra búsqueda."
+              : online
+                ? "Creá el primero con el botón de arriba."
+                : "Conectate para sincronizar el catálogo por primera vez."
+          }
         />
       ) : (
-        <>
-          <Table>
-            <thead>
-              <tr>
-                <Th>Producto</Th>
-                <Th>SKU</Th>
-                <Th className="text-right">Precio</Th>
-                <Th className="text-right">Costo</Th>
-                <Th className="text-right">Stock</Th>
-                <Th>Estado</Th>
-                <Th></Th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((product) => (
-                <tr key={product.id} className="hover:bg-bg-sunken">
-                  <Td className="font-medium">{product.name}</Td>
-                  <Td className="font-mono text-text-tertiary">{product.sku}</Td>
-                  <Td className="text-right font-mono tabular-nums">${formatMoney(product.price)}</Td>
-                  <Td className="text-right font-mono tabular-nums">
-                    {product.cost ? `$${formatMoney(product.cost)}` : "—"}
-                  </Td>
-                  <Td className="text-right font-mono tabular-nums">
-                    {(() => {
-                      const qty = stockByProduct[product.id];
-                      return qty !== undefined ? formatQty(qty) : "…";
-                    })()}
-                  </Td>
-                  <Td>
-                    <Badge variant={product.active ? "success" : "neutral"}>
-                      {product.active ? "Activo" : "Inactivo"}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <div className="flex justify-end gap-3 text-xs">
+        <Table>
+          <thead>
+            <tr>
+              <Th>Producto</Th>
+              <Th>SKU</Th>
+              <Th className="text-right">Precio</Th>
+              <Th className="text-right">Costo</Th>
+              <Th className="text-right">Stock</Th>
+              <Th>Estado</Th>
+              <Th></Th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((product) => (
+              <tr key={product.id} className="hover:bg-bg-sunken">
+                <Td className="font-medium">{product.name}</Td>
+                <Td className="font-mono text-text-tertiary">{product.sku}</Td>
+                <Td className="text-right font-mono tabular-nums">${formatMoney(product.price)}</Td>
+                <Td className="text-right font-mono tabular-nums">
+                  {product.cost ? `$${formatMoney(product.cost)}` : "—"}
+                </Td>
+                <Td className="text-right font-mono tabular-nums">
+                  {(() => {
+                    const qty = stockByProduct[product.id];
+                    return qty !== undefined ? formatQty(qty) : "…";
+                  })()}
+                </Td>
+                <Td>
+                  <Badge variant={product.active ? "success" : "neutral"}>
+                    {product.active ? "Activo" : "Inactivo"}
+                  </Badge>
+                </Td>
+                <Td>
+                  <div className="flex justify-end gap-3 text-xs">
+                    <button
+                      type="button"
+                      className="text-accent hover:underline disabled:cursor-not-allowed disabled:text-text-tertiary disabled:no-underline"
+                      onClick={() => openKardex(product)}
+                      disabled={!online}
+                      title={online ? undefined : "Necesitás conexión para ver el kardex"}
+                    >
+                      Ver kardex
+                    </button>
+                    {canUpdate && (
                       <button
                         type="button"
-                        className="text-accent hover:underline"
-                        onClick={() => openKardex(product)}
+                        className="text-accent hover:underline disabled:cursor-not-allowed disabled:text-text-tertiary disabled:no-underline"
+                        onClick={() => openEdit(product)}
+                        disabled={!online}
+                        title={online ? undefined : "Necesitás conexión para editar productos"}
                       >
-                        Ver kardex
+                        Editar
                       </button>
-                      {canUpdate && (
-                        <button
-                          type="button"
-                          className="text-accent hover:underline"
-                          onClick={() => openEdit(product)}
-                        >
-                          Editar
-                        </button>
-                      )}
-                      {canDelete && product.active && (
-                        <button
-                          type="button"
-                          className="text-danger hover:underline"
-                          onClick={() => void handleDeactivate(product)}
-                        >
-                          Desactivar
-                        </button>
-                      )}
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-
-          <Pagination
-            onPrev={handlePrev}
-            onNext={handleNext}
-            hasPrev={cursorStack.length > 0}
-            hasNext={!!nextCursor}
-          />
-        </>
+                    )}
+                    {canDelete && product.active && (
+                      <button
+                        type="button"
+                        className="text-danger hover:underline disabled:cursor-not-allowed disabled:text-text-tertiary disabled:no-underline"
+                        onClick={() => void handleDeactivate(product)}
+                        disabled={!online}
+                        title={online ? undefined : "Necesitás conexión para desactivar productos"}
+                      >
+                        Desactivar
+                      </button>
+                    )}
+                  </div>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       <ProductFormDrawer

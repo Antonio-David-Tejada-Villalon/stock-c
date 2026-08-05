@@ -205,3 +205,63 @@ sección "Pantallas").
 - Nada bloqueante identificado. Posible mejora futura (no bloquea esta
   fase): agregar un modo de alto contraste adicional a claro/oscuro si un
   cliente lo pide explícitamente — no se construye sin aprobación.
+
+---
+
+## Adenda — Refresh de marca (2026-08-05)
+
+El usuario proveyó `stockc_brand_guidelines.webp` (guía de marca real:
+isotipo hexagonal "C", paleta Naranja/Azul/Esmeralda, tipografía
+Inter+Manrope) y pidió aplicarla al sistema de diseño de esta fase.
+Cambios, con la razón de cada uno:
+
+- **`--accent` pasa de índigo (`#4453F0`/`#6C7BFF`) a Electric Blue
+  (`#2663EB` claro / `#5B8DF5` oscuro).** La sección 1 de este documento
+  fija que hay **un solo** acento con función de marca+interacción — el
+  Naranja de marca (`#FF6B00`) no puede cumplir ese doble rol porque texto
+  blanco sobre él da ~2.86:1, por debajo del mínimo WCAG 2.2 AA (§7) tanto
+  para texto (4.5:1) como para componentes de UI (3:1). Electric Blue sí
+  pasa (~5.16:1 claro, ~6.54:1 oscuro) y es un color de marca legítimo (la
+  guía lo incluye como variante oficial del app icon), así que asume el rol
+  único de `--accent` sin contradecir la regla de "un solo acento".
+- **Naranja de marca (`#FF6B00`) se agrega como `--brand-mark`, un token
+  aparte, no como `--accent`.** Uso exclusivo: el isotipo/app icon (ver
+  `packages/ui/src/Logo.tsx`), donde las reglas de contraste de texto no
+  aplican. Nunca se usa en botones, links, badges ni ningún elemento de UI
+  que porte texto.
+- **`--success`/`--warning`/`--danger` sin cambios.** La sección 1 ya
+  declara los colores semánticos como "un sistema aparte" del acento/marca
+  — no tienen por qué igualar el Esmeralda/etc. del deck de marca, y ya
+  están verificados en AA.
+- **Tipografía:** pasa de la pila nativa del SO (decisión original de esta
+  sección) a **Manrope autohospedada** (`--font-ui`, cuerpo/UI por
+  defecto) + **Inter autohospedada** (`--font-heading`, nuevo token —
+  headings, botones vía `packages/ui/src/Button.tsx`, marca). Autohospedada
+  vía `@fontsource` (paquete npm, sin CDN externo) para no romper el
+  principio offline-first de Fase 10 — un `<link>` a Google Fonts fallaría
+  sin red. Este es un cambio de arquitectura real, no solo estético (bytes
+  adicionales, riesgo de flash de fuente en la primera carga) — confirmado
+  explícitamente por el usuario antes de aplicarlo, sabiendo que reemplaza
+  una decisión ya razonada y aprobada.
+- **Isotipo nuevo:** `packages/ui/src/Logo.tsx` (`LogoMark` + `Logo`) — un
+  hexágono en trazo abierto hacia la derecha, recreado en SVG a partir de
+  la imagen de referencia (no había un vector original entregado). Usado
+  en el sidebar (`AppShell.tsx`, reemplaza el placeholder "S" + texto
+  plano) y como favicon (`apps/web/public/favicon.svg`).
+- **Favicon + PWA manifest:** `index.html` suma `<link rel="icon">` (SVG) y
+  `theme-color`; el manifest de `vite-plugin-pwa` (`vite.config.ts`) ahora
+  usa el nombre/colores de marca. **No se generaron íconos PNG
+  multi-resolución** (192/512/maskable/apple-touch-icon) — la
+  "instalabilidad" PWA completa ya quedaba fuera de alcance en Fase 10
+  (`docs/10-offline-first.md`), y un favicon SVG cubre navegadores
+  modernos de escritorio/Android; iOS (que sí requiere PNG para "Agregar a
+  inicio") queda como mejora futura si se retoma la instalabilidad.
+- **Espaciado/radios/movimiento (secciones 4-5):** sin cambios — la guía de
+  marca no los toca y ya coinciden (grid de 8px).
+- **Cobertura de `--font-heading`:** aplicado a nivel de token y en
+  `Button.tsx` (todos los CTA del producto quedan en Inter con un solo
+  archivo) y en el wordmark del `Logo`. **No se retocó cada heading
+  (`h1`/`h2`) de cada pantalla individualmente** — ese es un barrido
+  mecánico más grande, deliberadamente fuera de esta adenda; queda
+  disponible como clase `font-heading` de Tailwind para aplicarse
+  screen-by-screen si se pide.

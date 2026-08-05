@@ -10,6 +10,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-wash: var(--accent-wash);
   --color-accent-contrast: var(--accent-contrast);
+  --color-brand-mark: var(--brand-mark);
 
   --color-success: var(--success);
   --color-success-wash: var(--success-wash);
@@ -28,10 +29,12 @@
   --color-text-tertiary: var(--text-tertiary);
 
   --font-sans: var(--font-ui);
-  /* Nota: --font-mono y --radius-* usan el mismo nombre en tokens.css que
-     la clave que Tailwind espera acá — un var(--mismo-nombre) sería una
-     referencia circular, así que van con el valor literal (fuente de
-     verdad sigue siendo tokens.css / docs/02-diseno-ui-ux.md). */
+  /* Nota: --font-mono, --font-heading y --radius-* usan el mismo nombre en
+     tokens.css que la clave que Tailwind espera acá — un
+     var(--mismo-nombre) sería una referencia circular, así que van con el
+     valor literal (fuente de verdad sigue siendo tokens.css /
+     docs/02-diseno-ui-ux.md). */
+  --font-heading: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
 
   --radius-sm: 6px;

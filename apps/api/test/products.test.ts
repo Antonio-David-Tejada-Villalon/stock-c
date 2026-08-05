@@ -320,3 +320,69 @@ describe("GET /products (listado paginado por cursor)", () => {
     expect(res.json().items).toEqual([]);
   });
 });
+
+describe("GET /products (modo delta ?updatedSince, Fase 10)", () => {
+  it("includes recently deactivated products and excludes changes before the cutoff", async () => {
+    const since = new Date().toISOString();
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/products",
+      headers: authHeader(ownerToken),
+      payload: { sku: "DELTA-001", name: "Delta Producto", price: "1.00" },
+    });
+    const { id } = created.json();
+
+    await app.inject({
+      method: "DELETE",
+      url: `/products/${id}`,
+      headers: authHeader(ownerToken),
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/products?updatedSince=${encodeURIComponent(since)}`,
+      headers: authHeader(ownerToken),
+    });
+    expect(res.statusCode).toBe(200);
+    const match = res.json().items.find((p: { id: string }) => p.id === id);
+    expect(match).toBeDefined();
+    expect(match.active).toBe(false);
+
+    const nothingYet = await app.inject({
+      method: "GET",
+      url: `/products?updatedSince=${encodeURIComponent(new Date().toISOString())}`,
+      headers: authHeader(ownerToken),
+    });
+    expect(nothingYet.json().items).toEqual([]);
+  });
+
+  it("pages through delta results ordered by updatedAt without gaps or repeats", async () => {
+    const since = new Date().toISOString();
+    const skus = ["DELTA-A", "DELTA-B", "DELTA-C"];
+    for (const sku of skus) {
+      await app.inject({
+        method: "POST",
+        url: "/products",
+        headers: authHeader(ownerToken),
+        payload: { sku, name: `Producto ${sku}`, price: "1.00" },
+      });
+    }
+
+    const seenSkus: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const res = await app.inject({
+        method: "GET",
+        url: `/products?updatedSince=${encodeURIComponent(since)}&limit=1${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
+        headers: authHeader(ownerToken),
+      });
+      const body = res.json();
+      for (const item of body.items) seenSkus.push(item.sku);
+      cursor = body.nextCursor ?? undefined;
+    } while (cursor);
+
+    for (const sku of skus) expect(seenSkus).toContain(sku);
+    expect(new Set(seenSkus).size).toBe(seenSkus.length);
+  });
+});

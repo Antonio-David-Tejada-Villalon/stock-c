@@ -2,50 +2,64 @@
 
 ## Estado actual (última actualización: 2026-08-05)
 
-**Fase en curso: 10 — Offline First, aún no arrancada.** Fases 1-9
-aprobadas.
+**Fase en curso: 10 — Offline First (recorte inicial: Productos +
+Movimientos), código completo, pendiente de verificación en navegador y
+aprobación del usuario.** Fases 1-9 aprobadas.
 
-**Fase 9 (Control de inventario) — resumen** (detalle completo en
+**Adenda de branding (2026-08-05, sobre Fase 2 — detalle completo en
+[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md), sección "Adenda —
+Refresh de marca"):** el usuario proveyó `stockc_brand_guidelines.webp` y
+pidió aplicarla. `--accent` pasa de índigo a **Electric Blue** (`#2663EB`/
+`#5B8DF5`) — el Naranja de marca (`#FF6B00`) no puede ser el acento único
+porque texto blanco sobre él falla WCAG AA (~2.86:1); el naranja queda
+como `--brand-mark`, exclusivo del isotipo/app icon, nunca en botones o
+texto. `--success`/`--warning`/`--danger` sin cambios (son "un sistema
+aparte" según la Fase 2 original). Tipografía nativa del SO reemplazada
+por **Manrope + Inter autohospedadas** (`@fontsource`, sin CDN — respeta
+offline-first de Fase 10), confirmado explícitamente por el usuario antes
+de tocar esa decisión ya aprobada. Isotipo hexagonal nuevo
+(`packages/ui/src/Logo.tsx`, recreado en SVG — no había vector original)
+en el sidebar y como favicon; manifest de PWA actualizado con colores de
+marca. No se generaron íconos PNG multi-resolución (instalabilidad PWA
+sigue fuera de alcance) ni se retocó cada heading de cada pantalla
+individualmente (`font-heading` queda disponible para aplicarse
+screen-by-screen si se pide). Pendiente: verificación visual del usuario.
+
+**Fase 10 (Offline First, recorte inicial) — resumen** (detalle completo
+en [docs/10-offline-first.md](docs/10-offline-first.md)): sobre la
+arquitectura de sync híbrida ya decidida en Fase 1 (log de eventos para
+stock + LWW para datos maestros), **recorte explícito del usuario**:
+Productos queda **solo lectura offline** (catálogo + stock cacheados en
+IndexedDB vía Dexie); Movimientos queda **con alta en cola offline**
+(*outbox* — siempre se escribe ahí primero, esté online o no, en vez de
+tener dos caminos de código distintos). Categorías/Marcas/Unidades y el
+Panel siguen sin caché offline (decisión explícita). **UI de conflictos
+LWW diseñada pero no construida** (simple: descartar o sobrescribir,
+decisión explícita del usuario) — este recorte no tiene ninguna edición
+offline de datos maestros que la dispare, queda lista para cuando se
+extienda el alcance. La falla real de este recorte (un movimiento
+encolado offline que el servidor rechaza al sincronizar, ej.
+`insufficient_stock`) cae en una sección "Con error" en `/movimientos`
+con Reintentar/Descartar — nunca se descarta en silencio. `GET /products`
+suma un modo delta (`?updatedSince=`) reutilizando la ruta existente, sin
+módulo de sync nuevo. Service Worker vía `vite-plugin-pwa`, solo
+precachea el shell de la app — a propósito sin cachear respuestas de la
+API (ese es trabajo de Dexie, no del SW). Primera vez que `apps/web`
+tiene test runner (Vitest + `fake-indexeddb`) — 5 tests nuevos del motor
+de sync. 46 tests de backend en verde (44 previos + 2 del modo delta).
+**Código commiteado junto con la adenda de branding — sigue pendiente la
+verificación en navegador y aprobación del usuario para marcar la fase
+como aprobada.**
+
+**Fase 9 (Control de inventario) — resumen breve** (detalle completo en
 [docs/09-control-inventario.md](docs/09-control-inventario.md)): registro
-de movimientos de stock (**entrada, salida, ajuste** — decisión explícita
-del usuario, sin `transferencia` todavía) con **kardex** por producto.
-**Sucursal única implícita** (decisión explícita del usuario): no hay
-CRUD de sucursales ni selector en la UI todavía — el backend resuelve
-la única sucursal activa de la empresa y falla ruidosamente
-(`500 no_active_branch`) si hay 0 o más de 1. **Stock negativo bloqueado**
-(decisión explícita del usuario): una salida/ajuste que dejaría stock
-negativo se rechaza con `400 insufficient_stock`. `sequence` del kardex
-reutiliza `stockLevels.lastSequence` como contador atómico, asignado
-dentro de una **transacción multi-documento de Mongo** (ya decidida en
-Fase 3) junto con el `$inc` de `stockLevel` — primera fase con
-transacciones reales, por lo que los tests usan `MongoMemoryReplSet` en
-vez del `MongoMemoryServer` standalone de fases anteriores. `ajuste` es
-el único tipo cuyo `quantity` puede ser negativo (aclaración necesaria al
-modelo de Fase 3, que no especificaba el signo de `ajuste`).
-`clientMutationId` (UUID generado en el cliente) ya deja funcionando la
-idempotencia que Fase 3 diseñó pensando en Fase 10 (Offline First): un
-reintento con el mismo id no duplica el movimiento. **Verificado en
-navegador por el usuario** contra la base real de Atlas: entrada 20 →
-salida 5 → ajuste -2 con motivo dejó el stock en 13 (coincide
-exactamente), kardex y columna de stock reflejaron cada paso, y una
-salida de 999 fue rechazada por `insufficient_stock` sin tocar el stock.
-
-**Adenda post-Fase 9 (mismo día):** al verificar en el navegador se
-encontraron dos textos desactualizados que quedaron colgados desde fases
-anteriores — el Panel (Fase 6) seguía mostrando "Productos activos" y
-"Movimientos hoy" como "Se activa en la Fase 7/9" aunque esas fases ya
-estaban hechas, y la barra superior tenía un buscador muerto que decía
-"Buscar producto… (Fase 7)". Se conectó `GET /dashboard/summary` a datos
-reales (`productCount`, `movementsTodayCount`, `recentMovements`, con el
-mismo criterio de sucursal única implícita pero sin fallar si es
-ambigua — el Panel no es una operación de inventario) y el buscador pasó
-a ser un link real a `/productos`. "Stock bajo" queda con un motivo
-honesto (falta diseñar un umbral de stock mínimo por producto) en vez de
-un placeholder de fase vencida. 44 tests de backend en verde (33 previos
-+ 10 Fase 9 + 1 de esta adenda).
-
-**Fase 9 y su adenda commiteadas y pusheadas a `main`** (commit
-`a013b7f`).
+de movimientos (entrada/salida/ajuste) con kardex, sucursal única
+implícita, stock negativo bloqueado, `sequence` atómico dentro de una
+transacción de Mongo (primera fase con transacciones reales,
+`MongoMemoryReplSet` en los tests), `clientMutationId` para idempotencia
+(la base que usa la Fase 10). Adenda el mismo día: se conectó el Panel y
+el buscador de la barra superior a datos reales (tenían placeholders de
+fases ya completadas). Verificada en navegador y commiteada (`a013b7f`).
 
 **Fase 8 (Categorías, marcas, unidades) — resumen breve** (detalle
 completo en
@@ -81,8 +95,9 @@ nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 verde (`pnpm install/lint/typecheck/build/test`) —
 [run 30980196759](https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30980196759).
 CI de Fase 8 (commit `8088447`), su adenda (commit `605e54d`) y Fase 9
-con la suya no se verificó por falta de `gh` CLI en esta sesión —
-revisar manualmente en GitHub Actions si hace falta confirmar.
+con la suya (commit `a013b7f`) no se verificó por falta de `gh` CLI en
+esta sesión — revisar manualmente en GitHub Actions si hace falta
+confirmar. Fase 10 todavía no está commiteada.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -121,13 +136,18 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   sucursales todavía); tipos de movimiento entrada/salida/ajuste (sin
   transferencia); stock negativo bloqueado; `ajuste` es el único tipo con
   `quantity` con signo.
+- Offline First (Fase 10): recorte inicial a Productos (solo lectura) +
+  Movimientos (alta en cola vía outbox, siempre, online u offline);
+  Categorías/Marcas/Unidades y Panel sin offline todavía; UI de
+  conflictos LWW diseñada (descartar o sobrescribir, sin editor por
+  campo) pero no construida — este recorte no la dispara.
 
-**Próximo paso:** Fase 10 — Offline First (IndexedDB/Dexie, Service
-Workers, sincronización), sobre lo ya diseñado en
-[docs/01-arquitectura.md](docs/01-arquitectura.md) (sync híbrida: log de
-eventos para stock, LWW para datos maestros) y aprovechando que
-`clientMutationId` (Fase 9) ya deja la idempotencia del lado del servidor
-lista para reintentos offline.
+**Próximo paso inmediato:** verificación en navegador y aprobación del
+usuario para cerrar la Fase 10 (código completo, sin commitear) — con
+las DevTools en modo offline: navegar Productos con el caché, registrar
+un movimiento, reconectar y confirmar que sincroniza solo, y forzar un
+rechazo para ver la sección "Con error". Después de aprobada, sigue la
+**Fase 11 — Reportes**.
 
 ## Modo de trabajo (obligatorio, no negociable)
 

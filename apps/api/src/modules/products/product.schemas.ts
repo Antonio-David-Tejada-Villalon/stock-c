@@ -48,11 +48,15 @@ export const UpdateProductBodySchema = Type.Object({
 });
 export type UpdateProductBody = Static<typeof UpdateProductBodySchema>;
 
+// updatedSince: modo delta para sync offline (Fase 10) — ver
+// docs/10-offline-first.md, sección 2. Ignora q/active cuando está
+// presente; se documenta la interacción en el service, no acá.
 export const ListProductsQuerySchema = Type.Object({
   cursor: Type.Optional(Type.String()),
   limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
   q: Type.Optional(Type.String({ maxLength: 200 })),
   active: Type.Optional(Type.Boolean()),
+  updatedSince: Type.Optional(Type.String()),
 });
 export type ListProductsQuery = Static<typeof ListProductsQuerySchema>;
 

@@ -25,6 +25,8 @@ export interface ListProductsParams {
   limit?: number;
   q?: string;
   active?: boolean;
+  /** Modo delta (Fase 10, sync offline) — ver features/../offline/syncEngine.ts. */
+  updatedSince?: string;
 }
 
 export function listProducts(accessToken: string, params: ListProductsParams = {}) {
@@ -33,6 +35,7 @@ export function listProducts(accessToken: string, params: ListProductsParams = {
   if (params.limit) search.set("limit", String(params.limit));
   if (params.q) search.set("q", params.q);
   if (params.active !== undefined) search.set("active", String(params.active));
+  if (params.updatedSince) search.set("updatedSince", params.updatedSince);
   const qs = search.toString();
   return request<ProductListResponse>(`/products${qs ? `?${qs}` : ""}`, accessToken);
 }

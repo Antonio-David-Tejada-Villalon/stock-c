@@ -56,10 +56,67 @@ function decodeCursor(raw: string): Cursor {
   return parsed as Cursor;
 }
 
+interface DeltaCursor {
+  updatedAt: string;
+  id: string;
+}
+
+function encodeDeltaCursor(c: DeltaCursor): string {
+  return Buffer.from(JSON.stringify(c)).toString("base64url");
+}
+
+function decodeDeltaCursor(raw: string): DeltaCursor {
+  const parsed: unknown = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
+  if (
+    typeof parsed !== "object" ||
+    parsed === null ||
+    typeof (parsed as DeltaCursor).updatedAt !== "string" ||
+    typeof (parsed as DeltaCursor).id !== "string"
+  ) {
+    throw new Error("invalid cursor");
+  }
+  return parsed as DeltaCursor;
+}
+
 export function createProductService() {
   return {
     async list(companyId: string, query: ListProductsQuery) {
       const limit = query.limit ?? DEFAULT_LIMIT;
+
+      if (query.updatedSince !== undefined) {
+        // Modo delta (Fase 10, sync offline): ignora q/active — hace
+        // falta *todo* lo que cambió, incluyendo productos recién
+        // desactivados, para que el caché local se entere. Ordena por
+        // updatedAt en vez de por name.
+        const cursor = query.cursor ? decodeDeltaCursor(query.cursor) : null;
+        // Sin cursor (primera página): todo lo cambiado desde `updatedSince`.
+        // Con cursor (páginas siguientes): el cursor ya implica >= sinceDate,
+        // seguir desde ahí alcanza — no hace falta repetir el filtro base.
+        const filter = cursor
+          ? {
+              $or: [
+                { updatedAt: { $gt: new Date(cursor.updatedAt) } },
+                { updatedAt: new Date(cursor.updatedAt), _id: { $gt: new Types.ObjectId(cursor.id) } },
+              ],
+            }
+          : { updatedAt: { $gt: new Date(query.updatedSince) } };
+
+        const docs = await Product.find({
+          companyId,
+          ...filter,
+        })
+          .sort({ updatedAt: 1, _id: 1 })
+          .limit(limit + 1);
+
+        const hasMore = docs.length > limit;
+        const page = hasMore ? docs.slice(0, limit) : docs;
+        const last = page[page.length - 1];
+        const nextCursor =
+          hasMore && last ? encodeDeltaCursor({ updatedAt: last.updatedAt.toISOString(), id: last._id.toString() }) : null;
+
+        return { items: page.map(toView), nextCursor };
+      }
+
       const activeFilter = query.active === undefined ? {} : { active: query.active };
 
       if (query.q) {

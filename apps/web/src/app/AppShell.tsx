@@ -1,6 +1,7 @@
 import { Link, Outlet } from "react-router-dom";
 import {
   Avatar,
+  Logo,
   Sidebar,
   SidebarBrand,
   SidebarFooter,
@@ -11,9 +12,10 @@ import {
   UserMenu,
 } from "@stock-c/ui";
 import { useAuth } from "../features/auth/AuthContext";
+import { SyncStatusBadge } from "../offline/SyncStatusBadge";
 
 export function AppShell() {
-  const { user, logout } = useAuth();
+  const { user, accessToken, logout } = useAuth();
 
   if (!user) return null;
 
@@ -21,10 +23,7 @@ export function AppShell() {
     <div className="flex min-h-screen">
       <Sidebar>
         <SidebarBrand>
-          <span className="flex h-[22px] w-[22px] items-center justify-center rounded-md bg-accent text-[11px] font-bold text-accent-contrast">
-            S
-          </span>
-          STOCK-C
+          <Logo size={22} />
         </SidebarBrand>
 
         <TenantSwitch
@@ -67,7 +66,10 @@ export function AppShell() {
           <Link to="/productos" className="text-xs text-text-tertiary hover:text-text-secondary hover:underline">
             Buscar producto…
           </Link>
-          <UserMenu name={user.name} roleName={user.role.name} onLogout={() => void logout()} />
+          <div className="flex items-center gap-3">
+            <SyncStatusBadge accessToken={accessToken} />
+            <UserMenu name={user.name} roleName={user.role.name} onLogout={() => void logout()} />
+          </div>
         </Topbar>
         <main className="flex-1 p-5">
           <Outlet />

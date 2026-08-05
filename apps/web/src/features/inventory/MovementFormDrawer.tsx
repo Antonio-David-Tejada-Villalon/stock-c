@@ -3,8 +3,8 @@ import type { FormEvent } from "react";
 import { Button, Drawer, FormField, Input, Select, Textarea } from "@stock-c/ui";
 import type { Product, StockMovementType } from "@stock-c/shared-types";
 import { useAuth } from "../auth/AuthContext";
-import { ApiAuthError } from "../auth/api";
-import { createMovement } from "./api";
+import { queueMovement } from "../../offline/syncEngine";
+import { useOfflineSync } from "../../offline/useOfflineSync";
 
 const DECIMAL_PATTERN = /^\d+(\.\d{1,4})?$/;
 
@@ -44,6 +44,7 @@ export function MovementFormDrawer({
   onSaved,
 }: MovementFormDrawerProps) {
   const { accessToken } = useAuth();
+  const { sync } = useOfflineSync(accessToken);
   const [form, setForm] = useState<FormState>(emptyState(defaultProductId));
   const [errors, setErrors] = useState<Partial<Record<"productId" | "quantity" | "reason", string>>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -68,32 +69,28 @@ export function MovementFormDrawer({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!accessToken || !validate()) return;
+    if (!validate()) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
+      // Siempre pasa por la cola local (Fase 10), esté online o no — ver
+      // docs/10-offline-first.md, sección 2. Si un rechazo real del
+      // servidor aparece recién al sincronizar (ej. insufficient_stock),
+      // se ve en la sección "Con error" de /movimientos, no acá.
       const signedQuantity =
         form.type === "ajuste" && form.direction === "subtract" ? `-${form.quantity}` : form.quantity;
-      await createMovement(accessToken, {
+      await queueMovement({
         productId: form.productId,
         type: form.type,
         quantity: signedQuantity,
         reason: form.reason.trim() || undefined,
         reference: form.reference.trim() || undefined,
-        clientMutationId: crypto.randomUUID(),
       });
       onSaved();
       onOpenChange(false);
-    } catch (err) {
-      if (err instanceof ApiAuthError && err.code === "insufficient_stock") {
-        setSubmitError("No hay stock suficiente para esta operación.");
-      } else if (err instanceof ApiAuthError && err.code === "invalid_quantity") {
-        setErrors((prev) => ({ ...prev, quantity: "Cantidad inválida para este tipo de movimiento" }));
-      } else if (err instanceof ApiAuthError && err.code === "reason_required") {
-        setErrors((prev) => ({ ...prev, reason: "Un ajuste necesita un motivo" }));
-      } else {
-        setSubmitError("No se pudo registrar el movimiento. Intentá de nuevo.");
-      }
+      void sync();
+    } catch {
+      setSubmitError("No se pudo guardar el movimiento en el dispositivo. Intentá de nuevo.");
     } finally {
       setSubmitting(false);
     }

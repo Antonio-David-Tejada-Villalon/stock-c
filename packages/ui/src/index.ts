@@ -33,4 +33,6 @@ export type { DrawerProps } from "./Drawer";
 export { Select } from "./Select";
 export type { SelectProps } from "./Select";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
+export { Logo, LogoMark } from "./Logo";
+export type { LogoProps, LogoMarkProps } from "./Logo";
 export { cn } from "./cn";

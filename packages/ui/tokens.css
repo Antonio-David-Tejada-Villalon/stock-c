@@ -1,11 +1,17 @@
 /* Tokens del sistema de diseño — valores tal como se definieron y
-   aprobaron en docs/02-diseno-ui-ux.md. No declarar valores nuevos acá
-   sin actualizar ese documento primero. */
+   aprobaron en docs/02-diseno-ui-ux.md, con el refresh de marca aplicado
+   en la adenda de esa misma sección (2026-08-05). No declarar valores
+   nuevos acá sin actualizar ese documento primero. */
 
 :root {
-  --accent: #4453f0;
-  --accent-hover: #3641d6;
-  --accent-wash: #eef0ff;
+  /* Electric Blue de stockc_brand_guidelines.webp — reemplaza el índigo
+     original. Es el único --accent (marca + interacción, ver docs/02 §1);
+     el Naranja de marca (#FF6B00) NO es --accent porque texto blanco
+     sobre él da ~2.86:1 (no pasa WCAG 2.2 AA) — queda reservado al
+     isotipo/app icon en <Logo>, donde el contraste de texto no aplica. */
+  --accent: #2663eb;
+  --accent-hover: #1e50c4;
+  --accent-wash: #eaf0fe;
   --accent-contrast: #ffffff;
 
   --success: #1c9a6c;
@@ -24,9 +30,11 @@
   --text-secondary: #53566b;
   --text-tertiary: #8a8da1;
 
-  --font-ui:
-    -apple-system, BlinkMacSystemFont, "Segoe UI Variable", "Segoe UI", "Inter", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* Manrope (cuerpo/UI) + Inter (headings, botones, nav) autohospedadas
+     vía @fontsource — reemplaza la pila nativa del SO original de Fase 2
+     por decisión explícita del usuario al aplicar la guía de marca. */
+  --font-ui: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SFMono-Regular", "JetBrains Mono", Menlo, Consolas, monospace;
 
   --radius-sm: 6px;
@@ -37,13 +45,19 @@
   --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
   --dur-fast: 120ms;
   --dur-base: 190ms;
+
+  /* Naranja de marca — exclusivo del isotipo/app icon, nunca como
+     --accent (ver nota arriba). No es un token de uso general. */
+  --brand-mark: #ff6b00;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #6c7bff;
-    --accent-hover: #8492ff;
-    --accent-wash: #1b1e3a;
+    /* Azul más claro que el de modo claro para mantener ~6.5:1 contra
+       texto oscuro (--accent-contrast) sobre fondo oscuro. */
+    --accent: #5b8df5;
+    --accent-hover: #7ba3f7;
+    --accent-wash: #17233f;
     --accent-contrast: #0b0c10;
 
     --success: #33c08b;
@@ -65,9 +79,9 @@
 }
 
 :root[data-theme="dark"] {
-  --accent: #6c7bff;
-  --accent-hover: #8492ff;
-  --accent-wash: #1b1e3a;
+  --accent: #5b8df5;
+  --accent-hover: #7ba3f7;
+  --accent-wash: #17233f;
   --accent-contrast: #0b0c10;
   --success: #33c08b;
   --success-wash: #113329;
@@ -83,12 +97,13 @@
   --text: #f1f1f5;
   --text-secondary: #a6a9bc;
   --text-tertiary: #6f7286;
+  --brand-mark: #ff6b00;
 }
 
 :root[data-theme="light"] {
-  --accent: #4453f0;
-  --accent-hover: #3641d6;
-  --accent-wash: #eef0ff;
+  --accent: #2663eb;
+  --accent-hover: #1e50c4;
+  --accent-wash: #eaf0fe;
   --accent-contrast: #ffffff;
   --success: #1c9a6c;
   --success-wash: #e7f7f0;
@@ -104,4 +119,5 @@
   --text: #14161a;
   --text-secondary: #53566b;
   --text-tertiary: #8a8da1;
+  --brand-mark: #ff6b00;
 }
