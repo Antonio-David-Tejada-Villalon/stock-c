@@ -45,7 +45,7 @@ un placeholder de fase vencida. 44 tests de backend en verde (33 previos
 + 10 Fase 9 + 1 de esta adenda).
 
 **Fase 9 y su adenda commiteadas y pusheadas a `main`** (commit
-`PENDIENTE_DE_COMPLETAR`).
+`a013b7f`).
 
 **Fase 8 (Categorías, marcas, unidades) — resumen breve** (detalle
 completo en
