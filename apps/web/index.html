@@ -6,6 +6,19 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="theme-color" content="#2663eb" />
     <title>STOCK-C — Gestión de inventario conectada</title>
+    <script>
+      // Aplica el tema guardado antes del primer paint para evitar el
+      // flash claro→oscuro. Sin tema guardado, no toca nada — el CSS ya
+      // sigue prefers-color-scheme por su cuenta (ver theme/ThemeContext.tsx).
+      (function () {
+        try {
+          var stored = localStorage.getItem("stockc-theme");
+          if (stored === "light" || stored === "dark") {
+            document.documentElement.dataset.theme = stored;
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

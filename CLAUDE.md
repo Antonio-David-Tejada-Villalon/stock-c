@@ -20,11 +20,18 @@ offline-first de Fase 10), confirmado explícitamente por el usuario antes
 de tocar esa decisión ya aprobada. Isotipo hexagonal nuevo
 (`packages/ui/src/Logo.tsx`, recreado en SVG — no había vector original)
 en el sidebar y como favicon; manifest de PWA actualizado con colores de
-marca. No se generaron íconos PNG multi-resolución (instalabilidad PWA
-sigue fuera de alcance) ni se retocó cada heading de cada pantalla
-individualmente (`font-heading` queda disponible para aplicarse
-screen-by-screen si se pide). Commiteada junto con Fase 10 (commit
-`d9edaba`). Pendiente: verificación visual del usuario.
+marca. **Toggle de tema claro/oscuro** implementado (era diseño ya
+especificado en Fase 2 §6, nunca construido) — elección explícita en
+`localStorage` gana sobre el sistema, sin elección sigue
+`prefers-color-scheme` en vivo, script inline anti-flash en
+`index.html`, botón sol/luna en la topbar
+(`packages/ui/src/ThemeToggle.tsx`). No se generaron íconos PNG
+multi-resolución (instalabilidad PWA sigue fuera de alcance) ni se
+retocó cada heading de cada pantalla individualmente (`font-heading`
+queda disponible para aplicarse screen-by-screen si se pide). Guía de
+marca original archivada en
+[docs/assets/stockc-brand-guidelines.webp](docs/assets/stockc-brand-guidelines.webp).
+Pendiente: verificación visual del usuario.
 
 **Fase 10 (Offline First, recorte inicial) — resumen** (detalle completo
 en [docs/10-offline-first.md](docs/10-offline-first.md)): sobre la

@@ -210,10 +210,11 @@ sección "Pantallas").
 
 ## Adenda — Refresh de marca (2026-08-05)
 
-El usuario proveyó `stockc_brand_guidelines.webp` (guía de marca real:
-isotipo hexagonal "C", paleta Naranja/Azul/Esmeralda, tipografía
-Inter+Manrope) y pidió aplicarla al sistema de diseño de esta fase.
-Cambios, con la razón de cada uno:
+El usuario proveyó una guía de marca real (archivada en
+[docs/assets/stockc-brand-guidelines.webp](assets/stockc-brand-guidelines.webp)
+para referencia futura: isotipo hexagonal "C", paleta Naranja/Azul/
+Esmeralda, tipografía Inter+Manrope) y pidió aplicarla al sistema de
+diseño de esta fase. Cambios, con la razón de cada uno:
 
 - **`--accent` pasa de índigo (`#4453F0`/`#6C7BFF`) a Electric Blue
   (`#2663EB` claro / `#5B8DF5` oscuro).** La sección 1 de este documento
@@ -265,3 +266,13 @@ Cambios, con la razón de cada uno:
   mecánico más grande, deliberadamente fuera de esta adenda; queda
   disponible como clase `font-heading` de Tailwind para aplicarse
   screen-by-screen si se pide.
+- **Toggle de tema claro/oscuro — implementación real del diseño ya
+  especificado en la sección 6** (nunca se había construido: solo existían
+  los tokens `[data-theme="dark"/"light"]` sin ningún control de UI ni
+  persistencia). `apps/web/src/theme/ThemeContext.tsx` guarda la elección
+  explícita en `localStorage` (gana siempre sobre el sistema, tal como
+  dice §6); sin elección explícita, sigue `prefers-color-scheme` en vivo.
+  Un script inline en `index.html` aplica el tema guardado antes del
+  primer paint para evitar el flash claro→oscuro. Botón de solo ícono
+  (`packages/ui/src/ThemeToggle.tsx`, sol/luna en SVG, `aria-label` por
+  §7) en la topbar, junto al badge de sincronización.

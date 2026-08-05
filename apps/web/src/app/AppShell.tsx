@@ -8,14 +8,17 @@ import {
   SidebarNavItem,
   SidebarSection,
   TenantSwitch,
+  ThemeToggle,
   Topbar,
   UserMenu,
 } from "@stock-c/ui";
 import { useAuth } from "../features/auth/AuthContext";
+import { useTheme } from "../theme/ThemeContext";
 import { SyncStatusBadge } from "../offline/SyncStatusBadge";
 
 export function AppShell() {
   const { user, accessToken, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   if (!user) return null;
 
@@ -68,6 +71,7 @@ export function AppShell() {
           </Link>
           <div className="flex items-center gap-3">
             <SyncStatusBadge accessToken={accessToken} />
+            <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <UserMenu name={user.name} roleName={user.role.name} onLogout={() => void logout()} />
           </div>
         </Topbar>

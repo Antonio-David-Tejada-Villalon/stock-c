@@ -35,4 +35,6 @@ export type { SelectProps } from "./Select";
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
 export { Logo, LogoMark } from "./Logo";
 export type { LogoProps, LogoMarkProps } from "./Logo";
+export { ThemeToggle } from "./ThemeToggle";
+export type { ThemeToggleProps } from "./ThemeToggle";
 export { cn } from "./cn";
