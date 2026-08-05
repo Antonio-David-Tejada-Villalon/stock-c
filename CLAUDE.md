@@ -23,7 +23,8 @@ en el sidebar y como favicon; manifest de PWA actualizado con colores de
 marca. No se generaron íconos PNG multi-resolución (instalabilidad PWA
 sigue fuera de alcance) ni se retocó cada heading de cada pantalla
 individualmente (`font-heading` queda disponible para aplicarse
-screen-by-screen si se pide). Pendiente: verificación visual del usuario.
+screen-by-screen si se pide). Commiteada junto con Fase 10 (commit
+`d9edaba`). Pendiente: verificación visual del usuario.
 
 **Fase 10 (Offline First, recorte inicial) — resumen** (detalle completo
 en [docs/10-offline-first.md](docs/10-offline-first.md)): sobre la
@@ -47,9 +48,9 @@ precachea el shell de la app — a propósito sin cachear respuestas de la
 API (ese es trabajo de Dexie, no del SW). Primera vez que `apps/web`
 tiene test runner (Vitest + `fake-indexeddb`) — 5 tests nuevos del motor
 de sync. 46 tests de backend en verde (44 previos + 2 del modo delta).
-**Código commiteado junto con la adenda de branding — sigue pendiente la
-verificación en navegador y aprobación del usuario para marcar la fase
-como aprobada.**
+**Código commiteado junto con la adenda de branding (commit `d9edaba`) —
+sigue pendiente la verificación en navegador y aprobación del usuario
+para marcar la fase como aprobada.**
 
 **Fase 9 (Control de inventario) — resumen breve** (detalle completo en
 [docs/09-control-inventario.md](docs/09-control-inventario.md)): registro
