@@ -5,6 +5,7 @@ import { ProtectedRoute } from "./features/auth/ProtectedRoute";
 import { AppShell } from "./app/AppShell";
 import { DashboardPage } from "./pages/DashboardPage";
 import { ProductsPage } from "./pages/ProductsPage";
+import { CatalogsPage } from "./pages/CatalogsPage";
 import { ComingSoon } from "./pages/ComingSoon";
 
 export function App() {
@@ -22,6 +23,7 @@ export function App() {
           >
             <Route index element={<DashboardPage />} />
             <Route path="/productos" element={<ProductsPage />} />
+            <Route path="/categorias" element={<CatalogsPage />} />
             <Route
               path="/movimientos"
               element={<ComingSoon title="Movimientos" phase="Fase 9" />}

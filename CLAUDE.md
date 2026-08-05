@@ -2,22 +2,39 @@
 
 ## Estado actual (última actualización: 2026-08-05)
 
-**Fase en curso: 8 — Categorías, marcas, unidades, aún no arrancada.**
-Fases 1-7 aprobadas.
+**Fase en curso: 9 — Control de inventario (entradas, salidas, kardex),
+aún no arrancada.** Fases 1-8 aprobadas.
 
-**Fase 7 (CRUD de productos) — resumen** (detalle completo en
-[docs/07-productos.md](docs/07-productos.md)): CRUD completo (crear,
-listar con búsqueda y **paginación por cursor** tipo *seek*, editar con
-**concurrencia optimista**, desactivar sin borrar — nunca stock, eso es
-Fase 9). `categoryId`/`brandId`/`unitId` del modelo de Fase 3 se
-relajaron a **opcionales** por decisión explícita del usuario (Categorías/
-Marcas/Unidades recién llegan en Fase 8; no tenía sentido pedirlos ahora).
-Primer uso real de `authorize()` (escrito en Fase 5, sin consumidor hasta
-ahora) — botones de crear/editar/desactivar se ocultan en el frontend
-según permisos del usuario. `packages/ui` suma `Input`, `Textarea`,
-`FormField`, `Switch`, `Table`/`Th`/`Td`, `Pagination`, `Drawer` (panel
-lateral con Radix `Dialog`) — reutilizables para Fase 8 en adelante.
-21 tests de backend en verde (11 Fase 5 + 2 Fase 6 + 8 Fase 7).
+**Fase 8 (Categorías, marcas, unidades) — resumen** (detalle completo en
+[docs/08-categorias-marcas-unidades.md](docs/08-categorias-marcas-unidades.md)):
+CRUD de las tres tablas maestras que Fase 7 dejó pendientes. **Categorías
+en árbol sin límite de profundidad** (decisión explícita del usuario, no
+solo un nivel) con **validación de ciclos en el servidor** (no se puede
+asignar como padre a un descendiente propio). Desactivar una categoría/
+marca/unidad **no se bloquea** aunque haya productos activos que la
+referencien (mismo criterio de soft-delete que productos, decisión
+explícita del usuario). Marcas y Unidades comparten un factory genérico
+de servicio/rutas (`modules/catalogs/simpleCatalog.*`) para no duplicar
+CRUD idéntico dos veces; Categorías tiene su propio módulo por la lógica
+de jerarquía. 9 permisos nuevos (`category|brand|unit:create/update/
+delete`) — heredados automáticamente por Owner/Admin vía
+`Object.values(PERMISSIONS)` en el seed, sin tocarlo. `packages/ui` suma
+`Tabs` (Radix) y `Select`. 32 tests de backend en verde (21 previos + 11
+Fase 8). Seed de desarrollo extendido con categorías/marcas/unidades/
+productos de ejemplo (sabor San Juan/Cuyo, marcas ficticias) para probar
+con datos reales en vez de una base vacía.
+
+**Pendiente:** el formulario de productos (Fase 7) todavía no muestra los
+selectores de categoría/marca/unidad — los productos de ejemplo ya tienen
+esas referencias guardadas (cargadas directo por el seed), pero la UI de
+alta/edición de productos no las expone. Cambio chico, no es una fase
+nueva — a decidir con el usuario si se hace antes de arrancar Fase 9 o
+después.
+
+**Fase 8 todavía no commiteada ni pusheada** — código completo y
+verificado (`lint`/`typecheck`/`build`/`test` en verde, verificado en
+navegador con datos de ejemplo), pendiente de que el usuario pida el
+commit/push.
 
 **Incidente real durante la verificación de esta fase** (infraestructura,
 no código): al levantar el API para probar en navegador, `mongoPlugin` no
@@ -36,8 +53,9 @@ depender de IP fija en desarrollo) y **Upstash Redis** (base
 `stock-c-dev`, Oregon). Credenciales en `apps/api/.env`, gitignored,
 nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 
-**Pendiente inmediato:** confirmar con el usuario si se commitea y
-pushea el trabajo de Fase 7 antes de arrancar Fase 8.
+**Fase 7 commiteada y pusheada a `main`** (commit `a3c2ce1`), CI en
+verde (`pnpm install/lint/typecheck/build/test`) —
+[run 30980196759](https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30980196759).
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -68,14 +86,21 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   cuando una pantalla real los necesita, no todo el catálogo de una.
 - Productos (Fase 7): `categoryId`/`brandId`/`unitId` son opcionales en el
   modelo (no obligatorios como decía Fase 3 originalmente) porque
-  Categorías/Marcas/Unidades todavía no existen — se completan
-  retroactivamente cuando exista Fase 8.
+  Categorías/Marcas/Unidades todavía no existían — Fase 8 ya las agregó,
+  pero el formulario de productos aún no las selecciona (ver "Pendiente"
+  arriba).
+- Categorías/marcas/unidades (Fase 8): categorías en árbol sin límite de
+  profundidad con validación de ciclos en el servidor; desactivar no se
+  bloquea por referencias activas (mismo criterio que productos).
 
-**Próximo paso:** Fase 8 — Categorías, marcas, unidades (solo eso), sobre
-el modelo ya definido en
-[docs/03-modelo-datos.md](docs/03-modelo-datos.md). Al cerrarla, conviene
-volver al formulario de productos (Fase 7) para agregar los selectores de
-categoría/marca/unidad que hoy no se muestran.
+**Próximo paso:** Fase 9 — Control de inventario (entradas, salidas,
+kardex), sobre el modelo ya definido en
+[docs/03-modelo-datos.md](docs/03-modelo-datos.md) (`stockMovements`
+append-only como fuente de verdad, `stockLevels` como caché
+materializado, sincronización transaccional decidida en Fase 3). Antes de
+arrancarla, resolver con el usuario si conviene primero agregar los
+selectores de categoría/marca/unidad al formulario de productos (pendiente
+de Fase 7, chico, no es una fase nueva).
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -133,7 +158,7 @@ accesibilidad WCAG 2.2 AA.
 | 5 | Autenticación (JWT, refresh, roles, permisos, sesiones) | ✅ aprobada |
 | 6 | Dashboard principal | ✅ aprobada |
 | 7 | CRUD de productos | ✅ aprobada |
-| 8 | Categorías, marcas, unidades | ⚪ pendiente |
+| 8 | Categorías, marcas, unidades | ✅ aprobada |
 | 9 | Control de inventario (entradas, salidas, kardex) | ⚪ pendiente |
 | 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ⚪ pendiente |
 | 11 | Reportes | ⚪ pendiente |

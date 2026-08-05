@@ -30,4 +30,7 @@ export { Pagination } from "./Pagination";
 export type { PaginationProps } from "./Pagination";
 export { Drawer } from "./Drawer";
 export type { DrawerProps } from "./Drawer";
+export { Select } from "./Select";
+export type { SelectProps } from "./Select";
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./Tabs";
 export { cn } from "./cn";

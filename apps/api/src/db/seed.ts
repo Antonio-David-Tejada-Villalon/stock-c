@@ -12,6 +12,10 @@ import { Company } from "./models/company.model.js";
 import { Branch } from "./models/branch.model.js";
 import { Role, SYSTEM_ROLES, PERMISSIONS } from "./models/role.model.js";
 import { User } from "./models/user.model.js";
+import { Category } from "./models/category.model.js";
+import { Brand } from "./models/brand.model.js";
+import { Unit } from "./models/unit.model.js";
+import { Product } from "./models/product.model.js";
 import { hashPassword } from "../modules/auth/password.js";
 
 const DEV_COMPANY_SLUG = "ferreteria-demo";
@@ -43,6 +47,176 @@ async function ensureSystemRoles() {
   return roles;
 }
 
+/**
+ * Datos de ejemplo con sabor a San Juan, Argentina (Cuyo) — nombres de
+ * marca ficticios, no empresas reales, para no implicar una asociación
+ * real con ningún negocio existente. Sirven para probar Fase 7/8 con
+ * datos que no sean genéricos ("Producto 1", "Marca A").
+ */
+async function ensureCategories(companyId: string): Promise<Map<string, string>> {
+  const byName = new Map<string, string>();
+
+  const root = await Category.findOneAndUpdate(
+    { companyId, name: "Ferretería", parentId: null },
+    { $setOnInsert: {} },
+    { upsert: true, new: true },
+  );
+  byName.set("Ferretería", root._id.toString());
+
+  const children = ["Herramientas manuales", "Herramientas eléctricas", "Tornillería y fijaciones"];
+  for (const name of children) {
+    const doc = await Category.findOneAndUpdate(
+      { companyId, name, parentId: root._id },
+      { $setOnInsert: {} },
+      { upsert: true, new: true },
+    );
+    byName.set(name, doc._id.toString());
+  }
+
+  for (const name of ["Pinturería", "Jardín"]) {
+    const doc = await Category.findOneAndUpdate(
+      { companyId, name, parentId: null },
+      { $setOnInsert: {} },
+      { upsert: true, new: true },
+    );
+    byName.set(name, doc._id.toString());
+  }
+
+  return byName;
+}
+
+async function ensureBrands(companyId: string): Promise<Map<string, string>> {
+  const names = ["Cuyo Herramientas", "Pie de Palo Ferretera", "Zonda Tools", "Calingasta Hierros"];
+  const byName = new Map<string, string>();
+  for (const name of names) {
+    const doc = await Brand.findOneAndUpdate(
+      { companyId, name },
+      { $setOnInsert: {} },
+      { upsert: true, new: true },
+    );
+    byName.set(name, doc._id.toString());
+  }
+  return byName;
+}
+
+async function ensureUnits(companyId: string): Promise<Map<string, string>> {
+  const specs = [
+    { name: "Unidad", abbreviation: "un" },
+    { name: "Kilogramo", abbreviation: "kg" },
+    { name: "Metro", abbreviation: "mt" },
+    { name: "Litro", abbreviation: "lt" },
+  ];
+  const byName = new Map<string, string>();
+  for (const spec of specs) {
+    const doc = await Unit.findOneAndUpdate(
+      { companyId, name: spec.name },
+      { $setOnInsert: { abbreviation: spec.abbreviation } },
+      { upsert: true, new: true },
+    );
+    byName.set(spec.name, doc._id.toString());
+  }
+  return byName;
+}
+
+async function ensureProducts(
+  companyId: string,
+  categories: Map<string, string>,
+  brands: Map<string, string>,
+  units: Map<string, string>,
+) {
+  const products = [
+    {
+      sku: "SJ-MART-001",
+      name: "Martillo carpintero 20oz",
+      category: "Herramientas manuales",
+      brand: "Cuyo Herramientas",
+      unit: "Unidad",
+      price: "8500.00",
+      cost: "5200.00",
+    },
+    {
+      sku: "SJ-DEST-002",
+      name: "Juego de destornilladores x6",
+      category: "Herramientas manuales",
+      brand: "Pie de Palo Ferretera",
+      unit: "Unidad",
+      price: "6200.00",
+      cost: "3800.00",
+    },
+    {
+      sku: "SJ-TALA-003",
+      name: "Taladro percutor 650W",
+      category: "Herramientas eléctricas",
+      brand: "Zonda Tools",
+      unit: "Unidad",
+      price: "45000.00",
+      cost: "31000.00",
+    },
+    {
+      sku: "SJ-AMOL-004",
+      name: 'Amoladora angular 4 1/2"',
+      category: "Herramientas eléctricas",
+      brand: "Zonda Tools",
+      unit: "Unidad",
+      price: "38000.00",
+      cost: "26000.00",
+    },
+    {
+      sku: "SJ-TORN-005",
+      name: "Tornillos autoperforantes 8x1 (caja x100)",
+      category: "Tornillería y fijaciones",
+      brand: "Calingasta Hierros",
+      unit: "Unidad",
+      price: "3200.00",
+      cost: "1900.00",
+    },
+    {
+      sku: "SJ-PINT-006",
+      name: "Pintura látex interior blanco",
+      category: "Pinturería",
+      brand: "Pie de Palo Ferretera",
+      unit: "Litro",
+      price: "5400.00",
+      cost: "3600.00",
+    },
+    {
+      sku: "SJ-CABL-007",
+      name: "Cable eléctrico unipolar 2.5mm",
+      category: "Ferretería",
+      brand: "Cuyo Herramientas",
+      unit: "Metro",
+      price: "850.00",
+      cost: "520.00",
+    },
+    {
+      sku: "SJ-PALA-008",
+      name: "Pala punta redonda",
+      category: "Jardín",
+      brand: "Calingasta Hierros",
+      unit: "Unidad",
+      price: "7200.00",
+      cost: "4700.00",
+    },
+  ];
+
+  for (const p of products) {
+    await Product.findOneAndUpdate(
+      { companyId, sku: p.sku },
+      {
+        $setOnInsert: {
+          name: p.name,
+          categoryId: categories.get(p.category),
+          brandId: brands.get(p.brand),
+          unitId: units.get(p.unit),
+          price: p.price,
+          cost: p.cost,
+        },
+      },
+      { upsert: true, new: true },
+    );
+  }
+}
+
 async function main() {
   await mongoose.connect(env.mongodbUri);
   console.log("Conectado a MongoDB para seed");
@@ -71,6 +245,12 @@ async function main() {
     });
     console.log("Sucursal creada:", branch.code);
   }
+
+  const categories = await ensureCategories(company._id);
+  const brands = await ensureBrands(company._id);
+  const units = await ensureUnits(company._id);
+  await ensureProducts(company._id, categories, brands, units);
+  console.log("Categorías, marcas, unidades y productos de ejemplo listos");
 
   const existingOwner = await User.findOne({ email: DEV_OWNER_EMAIL }).setOptions({
     allowCrossTenant: true,

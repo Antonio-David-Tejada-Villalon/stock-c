@@ -11,6 +11,9 @@ import { rateLimitPlugin } from "./plugins/rateLimit.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { productRoutes } from "./modules/products/product.routes.js";
+import { categoryRoutes } from "./modules/categories/category.routes.js";
+import { brandRoutes } from "./modules/catalogs/brand.module.js";
+import { unitRoutes } from "./modules/catalogs/unit.module.js";
 
 export interface BuildAppOptions {
   /** Inyección para tests — evita depender de un Redis real. */
@@ -41,6 +44,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(authRoutes);
   await app.register(dashboardRoutes);
   await app.register(productRoutes);
+  await app.register(categoryRoutes);
+  await app.register(brandRoutes);
+  await app.register(unitRoutes);
 
   return app;
 }

@@ -27,6 +27,15 @@ export const PERMISSIONS = {
   PRODUCT_CREATE: "product:create",
   PRODUCT_UPDATE: "product:update",
   PRODUCT_DELETE: "product:delete",
+  CATEGORY_CREATE: "category:create",
+  CATEGORY_UPDATE: "category:update",
+  CATEGORY_DELETE: "category:delete",
+  BRAND_CREATE: "brand:create",
+  BRAND_UPDATE: "brand:update",
+  BRAND_DELETE: "brand:delete",
+  UNIT_CREATE: "unit:create",
+  UNIT_UPDATE: "unit:update",
+  UNIT_DELETE: "unit:delete",
   INVENTORY_MOVEMENT_CREATE: "inventory:movement:create",
   USER_MANAGE: "user:manage",
   ROLE_MANAGE: "role:manage",
@@ -57,4 +66,45 @@ export interface Product {
 export interface ProductListResponse {
   items: Product[];
   nextCursor: string | null;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  parentId?: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CategoryListResponse {
+  items: Category[];
+}
+
+export interface Brand {
+  id: string;
+  name: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BrandListResponse {
+  items: Brand[];
+}
+
+export interface Unit {
+  id: string;
+  name: string;
+  abbreviation?: string;
+  active: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UnitListResponse {
+  items: Unit[];
 }

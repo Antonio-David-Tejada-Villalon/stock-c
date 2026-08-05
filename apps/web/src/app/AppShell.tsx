@@ -39,6 +39,9 @@ export function AppShell() {
           <SidebarNavItem to="/productos" icon="▦">
             Productos
           </SidebarNavItem>
+          <SidebarNavItem to="/categorias" icon="▧">
+            Categorías
+          </SidebarNavItem>
           <SidebarNavItem to="/movimientos" icon="↕">
             Movimientos
           </SidebarNavItem>
