@@ -41,6 +41,9 @@ export interface ProductInput {
   sku: string;
   name: string;
   description?: string;
+  categoryId?: string;
+  brandId?: string;
+  unitId?: string;
   barcode?: string;
   price: string;
   cost?: string;
@@ -56,7 +59,13 @@ export function createProduct(accessToken: string, input: ProductInput) {
 export function updateProduct(
   accessToken: string,
   id: string,
-  input: Partial<ProductInput> & { version: number; active?: boolean },
+  input: Partial<Omit<ProductInput, "categoryId" | "brandId" | "unitId">> & {
+    version: number;
+    active?: boolean;
+    categoryId?: string | null;
+    brandId?: string | null;
+    unitId?: string | null;
+  },
 ) {
   return request<Product>(`/products/${id}`, accessToken, {
     method: "PATCH",

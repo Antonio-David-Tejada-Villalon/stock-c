@@ -119,6 +119,49 @@ describe("POST /products", () => {
   });
 });
 
+describe("Vínculo con categoría, marca y unidad (Fase 8)", () => {
+  it("creates a product linked to a category/brand/unit and can clear the link later", async () => {
+    const { Category } = await import("../src/db/models/category.model.js");
+    const { Brand } = await import("../src/db/models/brand.model.js");
+    const { Unit } = await import("../src/db/models/unit.model.js");
+    const { Company } = await import("../src/db/models/company.model.js");
+
+    const company = await Company.findOne({ slug: "products-test-co" });
+    const category = await Category.create({ companyId: company!._id, name: "Herramientas" });
+    const brand = await Brand.create({ companyId: company!._id, name: "Marca Test" });
+    const unit = await Unit.create({ companyId: company!._id, name: "Unidad Test" });
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/products",
+      headers: authHeader(ownerToken),
+      payload: {
+        sku: "SKU-LINK-001",
+        name: "Producto vinculado",
+        price: "100.00",
+        categoryId: category._id.toString(),
+        brandId: brand._id.toString(),
+        unitId: unit._id.toString(),
+      },
+    });
+    expect(created.statusCode).toBe(201);
+    const body = created.json();
+    expect(body.categoryId).toBe(category._id.toString());
+    expect(body.brandId).toBe(brand._id.toString());
+    expect(body.unitId).toBe(unit._id.toString());
+
+    const cleared = await app.inject({
+      method: "PATCH",
+      url: `/products/${body.id}`,
+      headers: authHeader(ownerToken),
+      payload: { version: body.version, categoryId: null },
+    });
+    expect(cleared.statusCode).toBe(200);
+    expect(cleared.json().categoryId).toBeUndefined();
+    expect(cleared.json().brandId).toBe(brand._id.toString());
+  });
+});
+
 describe("GET /products/:id y PATCH", () => {
   it("gets a product by id and updates it with optimistic concurrency", async () => {
     const created = await app.inject({

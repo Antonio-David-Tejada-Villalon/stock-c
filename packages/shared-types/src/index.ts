@@ -53,6 +53,9 @@ export interface Product {
   sku: string;
   name: string;
   description?: string;
+  categoryId?: string;
+  brandId?: string;
+  unitId?: string;
   barcode?: string;
   /** String decimal, nunca number — ver docs/07-productos.md, sección 2. */
   price: string;

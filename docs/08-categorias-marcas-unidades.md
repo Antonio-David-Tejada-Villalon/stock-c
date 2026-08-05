@@ -185,11 +185,10 @@ Marcas y Unidades. 32 tests de backend en total (21 previos + 11 de esta
 fase), todos en verde. Datos de ejemplo cargados en la base de desarrollo
 para facilitar pruebas futuras.
 
-**Falta:** el formulario de productos (Fase 7) todavía no muestra los
-selectores de categoría/marca/unidad — los productos de ejemplo ya tienen
-esas referencias guardadas en la base (cargadas directo por el seed), pero
-la UI de creación/edición de productos no las expone todavía. Es el paso
-siguiente natural, ya anotado en `CLAUDE.md`.
+**Falta:** nada bloqueante — el pendiente de agregar los selectores de
+categoría/marca/unidad al formulario de productos (Fase 7) se resolvió el
+mismo día, ver adenda en
+[docs/07-productos.md](docs/07-productos.md#10-revisión).
 
 **Podría mejorarse:** el árbol de categorías se solo indenta con texto
 (`└`) en vez de un componente de árbol colapsable — aceptable para el

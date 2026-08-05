@@ -24,17 +24,22 @@ Fase 8). Seed de desarrollo extendido con categorías/marcas/unidades/
 productos de ejemplo (sabor San Juan/Cuyo, marcas ficticias) para probar
 con datos reales en vez de una base vacía.
 
-**Pendiente:** el formulario de productos (Fase 7) todavía no muestra los
-selectores de categoría/marca/unidad — los productos de ejemplo ya tienen
-esas referencias guardadas (cargadas directo por el seed), pero la UI de
-alta/edición de productos no las expone. Cambio chico, no es una fase
-nueva — a decidir con el usuario si se hace antes de arrancar Fase 9 o
-después.
+**Fase 8 commiteada y pusheada a `main`** (commit `8088447`).
 
-**Fase 8 todavía no commiteada ni pusheada** — código completo y
-verificado (`lint`/`typecheck`/`build`/`test` en verde, verificado en
-navegador con datos de ejemplo), pendiente de que el usuario pida el
-commit/push.
+**Adenda post-Fase 8 (mismo día):** se agregaron los selectores de
+categoría/marca/unidad al formulario de productos (Fase 7) — pendiente
+que había quedado abierto al cerrar Fase 8. `CreateProductBodySchema`/
+`UpdateProductBodySchema` aceptan `categoryId`/`brandId`/`unitId`
+opcionales (`null` en el update para quitar la referencia);
+`ProductFormDrawer.tsx` los renderiza con el `Select` de Fase 8. De paso
+se encontró y corrigió un bug de AJV: con `coerceTypes` (default de
+Fastify), un `Union([String, Null])` con `String` primero coacciona un
+`null` entrante a `""` antes de intentar la rama `Null`, y Mongoose
+revienta al castear `""` como `ObjectId` — fix fue reordenar a
+`Union([Null, String])` en `product.schemas.ts` **y**
+`category.schemas.ts` (Fase 8 tenía el mismo bug latente, sin test que lo
+cubriera). 33 tests de backend en verde en total. Código completo y
+verificado (`lint`/`typecheck`/`build`/`test`), **todavía no commiteado**.
 
 **Incidente real durante la verificación de esta fase** (infraestructura,
 no código): al levantar el API para probar en navegador, `mongoPlugin` no
@@ -56,6 +61,9 @@ nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 **Fase 7 commiteada y pusheada a `main`** (commit `a3c2ce1`), CI en
 verde (`pnpm install/lint/typecheck/build/test`) —
 [run 30980196759](https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30980196759).
+CI de Fase 8 (commit `8088447`) no se verificó por falta de `gh` CLI en
+esta sesión — revisar manualmente en GitHub Actions si hace falta
+confirmar.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -85,10 +93,8 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   variables CSS en `packages/ui/tokens.css`. Componentes se agregan solo
   cuando una pantalla real los necesita, no todo el catálogo de una.
 - Productos (Fase 7): `categoryId`/`brandId`/`unitId` son opcionales en el
-  modelo (no obligatorios como decía Fase 3 originalmente) porque
-  Categorías/Marcas/Unidades todavía no existían — Fase 8 ya las agregó,
-  pero el formulario de productos aún no las selecciona (ver "Pendiente"
-  arriba).
+  modelo (no obligatorios como decía Fase 3 originalmente); desde la
+  adenda post-Fase 8 el formulario ya los selecciona.
 - Categorías/marcas/unidades (Fase 8): categorías en árbol sin límite de
   profundidad con validación de ciclos en el servidor; desactivar no se
   bloquea por referencias activas (mismo criterio que productos).
@@ -97,10 +103,7 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
 kardex), sobre el modelo ya definido en
 [docs/03-modelo-datos.md](docs/03-modelo-datos.md) (`stockMovements`
 append-only como fuente de verdad, `stockLevels` como caché
-materializado, sincronización transaccional decidida en Fase 3). Antes de
-arrancarla, resolver con el usuario si conviene primero agregar los
-selectores de categoría/marca/unidad al formulario de productos (pendiente
-de Fase 7, chico, no es una fase nueva).
+materializado, sincronización transaccional decidida en Fase 3).
 
 ## Modo de trabajo (obligatorio, no negociable)
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Button, Drawer, FormField, Input, Switch, Textarea } from "@stock-c/ui";
-import type { Product } from "@stock-c/shared-types";
+import { Button, Drawer, FormField, Input, Select, Switch, Textarea } from "@stock-c/ui";
+import type { Brand, Category, Product, Unit } from "@stock-c/shared-types";
+import { flattenTree } from "../catalogs/categoryTree";
 import { useAuth } from "../auth/AuthContext";
 import { ApiAuthError } from "../auth/api";
 import { createProduct, updateProduct } from "./api";
@@ -12,6 +13,9 @@ interface FormState {
   sku: string;
   name: string;
   description: string;
+  categoryId: string;
+  brandId: string;
+  unitId: string;
   barcode: string;
   price: string;
   cost: string;
@@ -22,6 +26,9 @@ const emptyState: FormState = {
   sku: "",
   name: "",
   description: "",
+  categoryId: "",
+  brandId: "",
+  unitId: "",
   barcode: "",
   price: "",
   cost: "",
@@ -33,6 +40,9 @@ function fromProduct(product: Product): FormState {
     sku: product.sku,
     name: product.name,
     description: product.description ?? "",
+    categoryId: product.categoryId ?? "",
+    brandId: product.brandId ?? "",
+    unitId: product.unitId ?? "",
     barcode: product.barcode ?? "",
     price: product.price,
     cost: product.cost ?? "",
@@ -44,10 +54,21 @@ export interface ProductFormDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product?: Product;
+  categories: Category[];
+  brands: Brand[];
+  units: Unit[];
   onSaved: (product: Product) => void;
 }
 
-export function ProductFormDrawer({ open, onOpenChange, product, onSaved }: ProductFormDrawerProps) {
+export function ProductFormDrawer({
+  open,
+  onOpenChange,
+  product,
+  categories,
+  brands,
+  units,
+  onSaved,
+}: ProductFormDrawerProps) {
   const { accessToken } = useAuth();
   const [form, setForm] = useState<FormState>(product ? fromProduct(product) : emptyState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
@@ -89,10 +110,18 @@ export function ProductFormDrawer({ open, onOpenChange, product, onSaved }: Prod
       const saved = product
         ? await updateProduct(accessToken, product.id, {
             ...payload,
+            categoryId: form.categoryId || null,
+            brandId: form.brandId || null,
+            unitId: form.unitId || null,
             active: form.active,
             version: product.version,
           })
-        : await createProduct(accessToken, payload);
+        : await createProduct(accessToken, {
+            ...payload,
+            categoryId: form.categoryId || undefined,
+            brandId: form.brandId || undefined,
+            unitId: form.unitId || undefined,
+          });
       onSaved(saved);
       onOpenChange(false);
     } catch (err) {
@@ -151,6 +180,52 @@ export function ProductFormDrawer({ open, onOpenChange, product, onSaved }: Prod
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
           />
         </FormField>
+
+        <div className="grid grid-cols-3 gap-4">
+          <FormField label="Categoría" htmlFor="p-category">
+            <Select
+              id="p-category"
+              value={form.categoryId}
+              onChange={(e) => setForm((f) => ({ ...f, categoryId: e.target.value }))}
+            >
+              <option value="">— Sin categoría —</option>
+              {flattenTree(categories).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {"—".repeat(c.depth)} {c.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Marca" htmlFor="p-brand">
+            <Select
+              id="p-brand"
+              value={form.brandId}
+              onChange={(e) => setForm((f) => ({ ...f, brandId: e.target.value }))}
+            >
+              <option value="">— Sin marca —</option>
+              {brands.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+          <FormField label="Unidad" htmlFor="p-unit">
+            <Select
+              id="p-unit"
+              value={form.unitId}
+              onChange={(e) => setForm((f) => ({ ...f, unitId: e.target.value }))}
+            >
+              <option value="">— Sin unidad —</option>
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}
+                  {u.abbreviation ? ` (${u.abbreviation})` : ""}
+                </option>
+              ))}
+            </Select>
+          </FormField>
+        </div>
 
         <FormField label="Código de barras" htmlFor="p-barcode">
           <Input

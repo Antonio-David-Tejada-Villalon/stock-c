@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge, Button, EmptyState, Input, Pagination, Table, Td, Th } from "@stock-c/ui";
-import { PERMISSIONS, type Product } from "@stock-c/shared-types";
+import { PERMISSIONS, type Brand, type Category, type Product, type Unit } from "@stock-c/shared-types";
 import { useAuth } from "../features/auth/AuthContext";
+import { listBrands, listCategories, listUnits } from "../features/catalogs/api";
 import { deactivateProduct, listProducts } from "../features/products/api";
 import { ProductFormDrawer } from "../features/products/ProductFormDrawer";
 
@@ -28,6 +29,16 @@ export function ProductsPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<Product | undefined>(undefined);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [units, setUnits] = useState<Unit[]>([]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    void listCategories(accessToken).then((res) => setCategories(res.items));
+    void listBrands(accessToken).then((res) => setBrands(res.items));
+    void listUnits(accessToken).then((res) => setUnits(res.items));
+  }, [accessToken]);
 
   const load = useCallback(async () => {
     if (!accessToken) return;
@@ -179,6 +190,9 @@ export function ProductsPage() {
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
         product={editing}
+        categories={categories}
+        brands={brands}
+        units={units}
         onSaved={handleSaved}
       />
     </div>

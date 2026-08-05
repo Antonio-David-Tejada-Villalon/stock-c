@@ -20,7 +20,10 @@ export const UpdateCategoryBodySchema = Type.Object({
   version: Type.Number(),
   name: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })),
   // null = quitarle el padre (pasa a ser categoría raíz); ausente = no tocar.
-  parentId: Type.Optional(Type.Union([Type.String(), Type.Null()])),
+  // Null primero en el Union: con coerceTypes de AJV, si "string" fuera la
+  // primera rama, un null entrante se coacciona a "" antes de intentar la
+  // rama "null" — Mongoose después revienta al castear "" como ObjectId.
+  parentId: Type.Optional(Type.Union([Type.Null(), Type.String()])),
   active: Type.Optional(Type.Boolean()),
 });
 export type UpdateCategoryBody = Static<typeof UpdateCategoryBodySchema>;

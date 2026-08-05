@@ -143,12 +143,26 @@ borrar), permisos por acción, aislamiento por tenant, componentes nuevos
 de `packages/ui` reutilizables para las fases siguientes (Categorías en
 Fase 8 va a necesitar Table/Drawer/FormField otra vez).
 
-**Falta:** categoría/marca/unidad no están en el formulario todavía —
-llegan con Fase 8. Sin carga de imágenes (no hay object storage
-configurado aún). Sin historial de cambios visible en la UI (el campo
-`version` y `updatedBy` ya se guardan, pero no hay pantalla de auditoría
-— no estaba pedida para esta fase).
+**Falta:** sin carga de imágenes (no hay object storage configurado
+aún). Sin historial de cambios visible en la UI (el campo `version` y
+`updatedBy` ya se guardan, pero no hay pantalla de auditoría — no estaba
+pedida para esta fase).
 
 **Podría mejorarse:** la búsqueda de texto no está paginada (tope de 50
 resultados) — aceptado como límite razonable para un primer corte, se
 revisita si hace falta en Fase 14.
+
+**Adenda (2026-08-05, tras aprobar Fase 8):** el formulario de productos
+ya muestra los selectores de categoría/marca/unidad que quedaron
+pendientes al cerrar esta fase — `CreateProductBodySchema`/
+`UpdateProductBodySchema` (`apps/api/src/modules/products/product.schemas.ts`)
+aceptan ahora `categoryId`/`brandId`/`unitId` opcionales (`null` en el
+update para quitar la referencia), y `ProductFormDrawer.tsx` los
+renderiza con el nuevo `Select` de `packages/ui`. Se encontró y corrigió
+un bug de AJV en el camino: con `coerceTypes` (default de Fastify), un
+`Union([String, Null])` con `String` primero coacciona un `null` entrante
+a `""` antes de intentar la rama `Null`, y Mongoose revienta al castear
+`""` como `ObjectId`. Fix: `Union([Null, String])` con `Null` primero, en
+`product.schemas.ts` y `category.schemas.ts` (Fase 8 tenía el mismo bug
+latente sin test que lo cubriera). 9 tests de backend en total para
+productos (8 + 1 nuevo cubriendo el vínculo con categoría/marca/unidad).
