@@ -43,9 +43,21 @@ export const PERMISSIONS = {
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 
+export interface DashboardRecentMovement {
+  id: string;
+  productId: string;
+  productName: string;
+  type: StockMovementType;
+  quantity: string;
+  createdAt: string;
+}
+
 export interface DashboardSummary {
   branchCount: number;
   activeUserCount: number;
+  productCount: number;
+  movementsTodayCount: number;
+  recentMovements: DashboardRecentMovement[];
 }
 
 export interface Product {
@@ -110,4 +122,39 @@ export interface Unit {
 
 export interface UnitListResponse {
   items: Unit[];
+}
+
+export type StockMovementType = "entrada" | "salida" | "ajuste";
+
+export interface StockMovement {
+  id: string;
+  productId: string;
+  type: StockMovementType;
+  /** String decimal — positivo en entrada/salida, positivo o negativo en
+   * ajuste. Ver docs/09-control-inventario.md, sección 2. */
+  quantity: string;
+  sequence: number;
+  reason?: string;
+  reference?: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface StockMovementListResponse {
+  items: StockMovement[];
+  nextCursor: string | null;
+}
+
+export interface StockLevel {
+  productId: string;
+  quantity: string;
+}
+
+export interface StockLevelListResponse {
+  items: StockLevel[];
+}
+
+export interface CreateStockMovementResponse {
+  movement: StockMovement;
+  stockLevel: StockLevel;
 }

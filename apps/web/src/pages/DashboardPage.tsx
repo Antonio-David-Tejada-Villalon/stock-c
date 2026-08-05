@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
-import { EmptyState, StatCard } from "@stock-c/ui";
-import type { DashboardSummary } from "@stock-c/shared-types";
+import { Badge, EmptyState, StatCard, Table, Td, Th } from "@stock-c/ui";
+import type { DashboardSummary, StockMovementType } from "@stock-c/shared-types";
 import { useAuth } from "../features/auth/AuthContext";
 import { fetchDashboardSummary } from "../features/dashboard/api";
+
+function formatQty(value: string): string {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString("es-AR", { maximumFractionDigits: 4 }) : value;
+}
+
+const TYPE_LABEL: Record<StockMovementType, string> = {
+  entrada: "Entrada",
+  salida: "Salida",
+  ajuste: "Ajuste",
+};
 
 export function DashboardPage() {
   const { accessToken } = useAuth();
@@ -23,9 +34,12 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Sucursales" value={summary?.branchCount} />
         <StatCard label="Usuarios del equipo" value={summary?.activeUserCount} />
-        <StatCard label="Productos activos" emptyReason="Se activa en la Fase 7" />
-        <StatCard label="Stock bajo" emptyReason="Se activa en la Fase 9" />
-        <StatCard label="Movimientos hoy" emptyReason="Se activa en la Fase 9" />
+        <StatCard label="Productos activos" value={summary?.productCount} />
+        <StatCard
+          label="Stock bajo"
+          emptyReason="Necesita un umbral de stock mínimo por producto — todavía no diseñado"
+        />
+        <StatCard label="Movimientos hoy" value={summary?.movementsTodayCount} />
       </div>
 
       {error && (
@@ -36,11 +50,36 @@ export function DashboardPage() {
 
       <div>
         <h2 className="mb-2.5 text-[15px] font-semibold">Movimientos recientes</h2>
-        <EmptyState
-          glyph="📦"
-          title="Sin movimientos aún"
-          description="Los ingresos y salidas de stock van a aparecer acá a partir de la Fase 9."
-        />
+        {summary && summary.recentMovements.length > 0 ? (
+          <Table>
+            <thead>
+              <tr>
+                <Th>Fecha</Th>
+                <Th>Producto</Th>
+                <Th>Tipo</Th>
+                <Th className="text-right">Cantidad</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.recentMovements.map((m) => (
+                <tr key={m.id}>
+                  <Td className="text-text-tertiary">{new Date(m.createdAt).toLocaleString("es-AR")}</Td>
+                  <Td className="font-medium">{m.productName}</Td>
+                  <Td>
+                    <Badge variant={m.type === "salida" ? "warning" : "success"}>{TYPE_LABEL[m.type]}</Badge>
+                  </Td>
+                  <Td className="text-right font-mono tabular-nums">{formatQty(m.quantity)}</Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <EmptyState
+            glyph="📦"
+            title="Sin movimientos aún"
+            description="Registrá el primero desde la sección Movimientos."
+          />
+        )}
       </div>
     </div>
   );

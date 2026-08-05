@@ -3,6 +3,8 @@ import { Badge, Button, EmptyState, Input, Pagination, Table, Td, Th } from "@st
 import { PERMISSIONS, type Brand, type Category, type Product, type Unit } from "@stock-c/shared-types";
 import { useAuth } from "../features/auth/AuthContext";
 import { listBrands, listCategories, listUnits } from "../features/catalogs/api";
+import { getStockLevels } from "../features/inventory/api";
+import { KardexDrawer } from "../features/inventory/KardexDrawer";
 import { deactivateProduct, listProducts } from "../features/products/api";
 import { ProductFormDrawer } from "../features/products/ProductFormDrawer";
 
@@ -13,6 +15,11 @@ function formatMoney(value: string): string {
   return Number.isFinite(n)
     ? n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     : value;
+}
+
+function formatQty(value: string): string {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString("es-AR", { maximumFractionDigits: 4 }) : value;
 }
 
 export function ProductsPage() {
@@ -32,6 +39,9 @@ export function ProductsPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
+  const [stockByProduct, setStockByProduct] = useState<Record<string, string>>({});
+  const [kardexProduct, setKardexProduct] = useState<Product | undefined>(undefined);
+  const [kardexOpen, setKardexOpen] = useState(false);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -59,6 +69,16 @@ export function ProductsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!accessToken || items.length === 0) return;
+    void getStockLevels(
+      accessToken,
+      items.map((p) => p.id),
+    ).then((res) => {
+      setStockByProduct(Object.fromEntries(res.items.map((s) => [s.productId, s.quantity])));
+    });
+  }, [accessToken, items]);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -91,6 +111,11 @@ export function ProductsPage() {
   function openEdit(product: Product) {
     setEditing(product);
     setDrawerOpen(true);
+  }
+
+  function openKardex(product: Product) {
+    setKardexProduct(product);
+    setKardexOpen(true);
   }
 
   function handleSaved() {
@@ -132,6 +157,7 @@ export function ProductsPage() {
                 <Th>SKU</Th>
                 <Th className="text-right">Precio</Th>
                 <Th className="text-right">Costo</Th>
+                <Th className="text-right">Stock</Th>
                 <Th>Estado</Th>
                 <Th></Th>
               </tr>
@@ -145,6 +171,12 @@ export function ProductsPage() {
                   <Td className="text-right font-mono tabular-nums">
                     {product.cost ? `$${formatMoney(product.cost)}` : "—"}
                   </Td>
+                  <Td className="text-right font-mono tabular-nums">
+                    {(() => {
+                      const qty = stockByProduct[product.id];
+                      return qty !== undefined ? formatQty(qty) : "…";
+                    })()}
+                  </Td>
                   <Td>
                     <Badge variant={product.active ? "success" : "neutral"}>
                       {product.active ? "Activo" : "Inactivo"}
@@ -152,6 +184,13 @@ export function ProductsPage() {
                   </Td>
                   <Td>
                     <div className="flex justify-end gap-3 text-xs">
+                      <button
+                        type="button"
+                        className="text-accent hover:underline"
+                        onClick={() => openKardex(product)}
+                      >
+                        Ver kardex
+                      </button>
                       {canUpdate && (
                         <button
                           type="button"
@@ -195,6 +234,8 @@ export function ProductsPage() {
         units={units}
         onSaved={handleSaved}
       />
+
+      <KardexDrawer open={kardexOpen} onOpenChange={setKardexOpen} product={kardexProduct} />
     </div>
   );
 }

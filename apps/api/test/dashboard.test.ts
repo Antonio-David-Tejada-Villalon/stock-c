@@ -95,6 +95,72 @@ describe("GET /dashboard/summary", () => {
       headers: { authorization: `Bearer ${accessToken}` },
     });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ branchCount: 2, activeUserCount: 2 });
+    // Esta empresa tiene 2 sucursales activas a propósito (para probar el
+    // filtro de branchCount) — por eso movementsTodayCount/recentMovements
+    // quedan en su valor "sin sucursal única resuelta" (ver dashboard.routes.ts).
+    expect(res.json()).toEqual({
+      branchCount: 2,
+      activeUserCount: 2,
+      productCount: 0,
+      movementsTodayCount: 0,
+      recentMovements: [],
+    });
+  });
+
+  it("counts today's movements and lists the most recent ones when there is exactly one active branch", async () => {
+    const { Company } = await import("../src/db/models/company.model.js");
+    const { Branch } = await import("../src/db/models/branch.model.js");
+    const { Role } = await import("../src/db/models/role.model.js");
+    const { User } = await import("../src/db/models/user.model.js");
+    const { Product } = await import("../src/db/models/product.model.js");
+    const { StockMovement } = await import("../src/db/models/stockMovement.model.js");
+    const { hashPassword } = await import("../src/modules/auth/password.js");
+
+    const company = await Company.create({ name: "Single Branch Co", slug: "single-branch-co" });
+    const branch = await Branch.create({ companyId: company._id, name: "Central", code: "CENTRAL" });
+    const role = await Role.create({ companyId: null, name: "Owner", isSystem: true, permissions: [] });
+    const passwordHash = await hashPassword(PASSWORD);
+    await User.create({
+      companyId: company._id,
+      email: "owner@single-branch-co.local",
+      passwordHash,
+      name: "Owner",
+      roleId: role._id,
+      branchRestrictions: [],
+    });
+    const product = await Product.create({ companyId: company._id, sku: "DASH-001", name: "Producto Dashboard", price: "1.00" });
+    await StockMovement.create({
+      companyId: company._id,
+      branchId: branch._id,
+      productId: product._id,
+      type: "entrada",
+      quantity: "5",
+      sequence: 1,
+      clientMutationId: "dash-test-1",
+      createdBy: role._id,
+      clientCreatedAt: new Date(),
+    });
+
+    const login = await app.inject({
+      method: "POST",
+      url: "/auth/login",
+      payload: { email: "owner@single-branch-co.local", password: PASSWORD },
+    });
+    const singleBranchToken = login.json().accessToken;
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/dashboard/summary",
+      headers: { authorization: `Bearer ${singleBranchToken}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.movementsTodayCount).toBe(1);
+    expect(body.recentMovements).toHaveLength(1);
+    expect(body.recentMovements[0]).toMatchObject({
+      productName: "Producto Dashboard",
+      type: "entrada",
+      quantity: "5",
+    });
   });
 });

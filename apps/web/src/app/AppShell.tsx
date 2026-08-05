@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import {
   Avatar,
   Sidebar,
@@ -64,7 +64,9 @@ export function AppShell() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar>
-          <span className="text-xs text-text-tertiary">Buscar producto… (Fase 7)</span>
+          <Link to="/productos" className="text-xs text-text-tertiary hover:text-text-secondary hover:underline">
+            Buscar producto…
+          </Link>
           <UserMenu name={user.name} roleName={user.role.name} onLogout={() => void logout()} />
         </Topbar>
         <main className="flex-1 p-5">

@@ -2,46 +2,65 @@
 
 ## Estado actual (última actualización: 2026-08-05)
 
-**Fase en curso: 9 — Control de inventario (entradas, salidas, kardex),
-aún no arrancada.** Fases 1-8 aprobadas.
+**Fase en curso: 10 — Offline First, aún no arrancada.** Fases 1-9
+aprobadas.
 
-**Fase 8 (Categorías, marcas, unidades) — resumen** (detalle completo en
+**Fase 9 (Control de inventario) — resumen** (detalle completo en
+[docs/09-control-inventario.md](docs/09-control-inventario.md)): registro
+de movimientos de stock (**entrada, salida, ajuste** — decisión explícita
+del usuario, sin `transferencia` todavía) con **kardex** por producto.
+**Sucursal única implícita** (decisión explícita del usuario): no hay
+CRUD de sucursales ni selector en la UI todavía — el backend resuelve
+la única sucursal activa de la empresa y falla ruidosamente
+(`500 no_active_branch`) si hay 0 o más de 1. **Stock negativo bloqueado**
+(decisión explícita del usuario): una salida/ajuste que dejaría stock
+negativo se rechaza con `400 insufficient_stock`. `sequence` del kardex
+reutiliza `stockLevels.lastSequence` como contador atómico, asignado
+dentro de una **transacción multi-documento de Mongo** (ya decidida en
+Fase 3) junto con el `$inc` de `stockLevel` — primera fase con
+transacciones reales, por lo que los tests usan `MongoMemoryReplSet` en
+vez del `MongoMemoryServer` standalone de fases anteriores. `ajuste` es
+el único tipo cuyo `quantity` puede ser negativo (aclaración necesaria al
+modelo de Fase 3, que no especificaba el signo de `ajuste`).
+`clientMutationId` (UUID generado en el cliente) ya deja funcionando la
+idempotencia que Fase 3 diseñó pensando en Fase 10 (Offline First): un
+reintento con el mismo id no duplica el movimiento. **Verificado en
+navegador por el usuario** contra la base real de Atlas: entrada 20 →
+salida 5 → ajuste -2 con motivo dejó el stock en 13 (coincide
+exactamente), kardex y columna de stock reflejaron cada paso, y una
+salida de 999 fue rechazada por `insufficient_stock` sin tocar el stock.
+
+**Adenda post-Fase 9 (mismo día):** al verificar en el navegador se
+encontraron dos textos desactualizados que quedaron colgados desde fases
+anteriores — el Panel (Fase 6) seguía mostrando "Productos activos" y
+"Movimientos hoy" como "Se activa en la Fase 7/9" aunque esas fases ya
+estaban hechas, y la barra superior tenía un buscador muerto que decía
+"Buscar producto… (Fase 7)". Se conectó `GET /dashboard/summary` a datos
+reales (`productCount`, `movementsTodayCount`, `recentMovements`, con el
+mismo criterio de sucursal única implícita pero sin fallar si es
+ambigua — el Panel no es una operación de inventario) y el buscador pasó
+a ser un link real a `/productos`. "Stock bajo" queda con un motivo
+honesto (falta diseñar un umbral de stock mínimo por producto) en vez de
+un placeholder de fase vencida. 44 tests de backend en verde (33 previos
++ 10 Fase 9 + 1 de esta adenda).
+
+**Fase 9 y su adenda commiteadas y pusheadas a `main`** (commit
+`PENDIENTE_DE_COMPLETAR`).
+
+**Fase 8 (Categorías, marcas, unidades) — resumen breve** (detalle
+completo en
 [docs/08-categorias-marcas-unidades.md](docs/08-categorias-marcas-unidades.md)):
-CRUD de las tres tablas maestras que Fase 7 dejó pendientes. **Categorías
-en árbol sin límite de profundidad** (decisión explícita del usuario, no
-solo un nivel) con **validación de ciclos en el servidor** (no se puede
-asignar como padre a un descendiente propio). Desactivar una categoría/
-marca/unidad **no se bloquea** aunque haya productos activos que la
-referencien (mismo criterio de soft-delete que productos, decisión
-explícita del usuario). Marcas y Unidades comparten un factory genérico
-de servicio/rutas (`modules/catalogs/simpleCatalog.*`) para no duplicar
-CRUD idéntico dos veces; Categorías tiene su propio módulo por la lógica
-de jerarquía. 9 permisos nuevos (`category|brand|unit:create/update/
-delete`) — heredados automáticamente por Owner/Admin vía
-`Object.values(PERMISSIONS)` en el seed, sin tocarlo. `packages/ui` suma
-`Tabs` (Radix) y `Select`. 32 tests de backend en verde (21 previos + 11
-Fase 8). Seed de desarrollo extendido con categorías/marcas/unidades/
-productos de ejemplo (sabor San Juan/Cuyo, marcas ficticias) para probar
-con datos reales en vez de una base vacía.
+CRUD de las tres tablas maestras que Fase 7 dejó pendientes, categorías
+en árbol sin límite de profundidad con validación de ciclos en el
+servidor, factory genérico para Marcas/Unidades
+(`modules/catalogs/simpleCatalog.*`). Commiteada (`8088447`) junto con
+una adenda el mismo día que agregó los selectores de categoría/marca/
+unidad al formulario de productos y corrigió un bug de AJV (coerción
+`null`→`""` en `Union([String, Null])`, fix: reordenar a `Union([Null,
+String])`) — commit `605e54d`. Detalle completo en el bullet de
+"decisiones confirmadas" más abajo.
 
-**Fase 8 commiteada y pusheada a `main`** (commit `8088447`).
-
-**Adenda post-Fase 8 (mismo día):** se agregaron los selectores de
-categoría/marca/unidad al formulario de productos (Fase 7) — pendiente
-que había quedado abierto al cerrar Fase 8. `CreateProductBodySchema`/
-`UpdateProductBodySchema` aceptan `categoryId`/`brandId`/`unitId`
-opcionales (`null` en el update para quitar la referencia);
-`ProductFormDrawer.tsx` los renderiza con el `Select` de Fase 8. De paso
-se encontró y corrigió un bug de AJV: con `coerceTypes` (default de
-Fastify), un `Union([String, Null])` con `String` primero coacciona un
-`null` entrante a `""` antes de intentar la rama `Null`, y Mongoose
-revienta al castear `""` como `ObjectId` — fix fue reordenar a
-`Union([Null, String])` en `product.schemas.ts` **y**
-`category.schemas.ts` (Fase 8 tenía el mismo bug latente, sin test que lo
-cubriera). 33 tests de backend en verde en total. Código completo y
-verificado (`lint`/`typecheck`/`build`/`test`), **todavía no commiteado**.
-
-**Incidente real durante la verificación de esta fase** (infraestructura,
+**Incidente real durante la verificación de Fase 7** (infraestructura,
 no código): al levantar el API para probar en navegador, `mongoPlugin` no
 conectaba a Atlas — TCP abría pero el handshake TLS se cortaba con
 `SSL alert: internal error` en los tres nodos del cluster. Se descartó
@@ -61,9 +80,9 @@ nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 **Fase 7 commiteada y pusheada a `main`** (commit `a3c2ce1`), CI en
 verde (`pnpm install/lint/typecheck/build/test`) —
 [run 30980196759](https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30980196759).
-CI de Fase 8 (commit `8088447`) no se verificó por falta de `gh` CLI en
-esta sesión — revisar manualmente en GitHub Actions si hace falta
-confirmar.
+CI de Fase 8 (commit `8088447`), su adenda (commit `605e54d`) y Fase 9
+con la suya no se verificó por falta de `gh` CLI en esta sesión —
+revisar manualmente en GitHub Actions si hace falta confirmar.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
@@ -98,12 +117,17 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
 - Categorías/marcas/unidades (Fase 8): categorías en árbol sin límite de
   profundidad con validación de ciclos en el servidor; desactivar no se
   bloquea por referencias activas (mismo criterio que productos).
+- Control de inventario (Fase 9): sucursal única implícita (sin CRUD de
+  sucursales todavía); tipos de movimiento entrada/salida/ajuste (sin
+  transferencia); stock negativo bloqueado; `ajuste` es el único tipo con
+  `quantity` con signo.
 
-**Próximo paso:** Fase 9 — Control de inventario (entradas, salidas,
-kardex), sobre el modelo ya definido en
-[docs/03-modelo-datos.md](docs/03-modelo-datos.md) (`stockMovements`
-append-only como fuente de verdad, `stockLevels` como caché
-materializado, sincronización transaccional decidida en Fase 3).
+**Próximo paso:** Fase 10 — Offline First (IndexedDB/Dexie, Service
+Workers, sincronización), sobre lo ya diseñado en
+[docs/01-arquitectura.md](docs/01-arquitectura.md) (sync híbrida: log de
+eventos para stock, LWW para datos maestros) y aprovechando que
+`clientMutationId` (Fase 9) ya deja la idempotencia del lado del servidor
+lista para reintentos offline.
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -162,7 +186,7 @@ accesibilidad WCAG 2.2 AA.
 | 6 | Dashboard principal | ✅ aprobada |
 | 7 | CRUD de productos | ✅ aprobada |
 | 8 | Categorías, marcas, unidades | ✅ aprobada |
-| 9 | Control de inventario (entradas, salidas, kardex) | ⚪ pendiente |
+| 9 | Control de inventario (entradas, salidas, kardex) | ✅ aprobada |
 | 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ⚪ pendiente |
 | 11 | Reportes | ⚪ pendiente |
 | 12 | Notificaciones | ⚪ pendiente |
