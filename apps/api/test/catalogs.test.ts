@@ -197,6 +197,114 @@ describe("Categorías", () => {
     });
     expect(got.json().active).toBe(false);
   });
+
+  it("creates a category with code/icon/color/imageUrl and rejects a duplicate code", async () => {
+    const created = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Bebidas", code: "BEB-001", icon: "Wine", color: "#3B82F6", imageUrl: "https://example.com/beb.png" },
+    });
+    expect(created.statusCode).toBe(201);
+    const body = created.json();
+    expect(body.code).toBe("BEB-001");
+    expect(body.icon).toBe("Wine");
+    expect(body.color).toBe("#3B82F6");
+    expect(body.imageUrl).toBe("https://example.com/beb.png");
+
+    const duplicate = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Bebidas otra vez", code: "BEB-001" },
+    });
+    expect(duplicate.statusCode).toBe(409);
+    expect(duplicate.json().error).toBe("duplicate_code");
+  });
+
+  it("allows two categories to both clear their code without colliding (sparse unique index)", async () => {
+    const a = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Con código A", code: "TMP-A" },
+    });
+    const b = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Con código B", code: "TMP-B" },
+    });
+
+    const clearA = await app.inject({
+      method: "PATCH",
+      url: `/categories/${a.json().id}`,
+      headers: authHeader(ownerToken),
+      payload: { version: a.json().version, code: null },
+    });
+    expect(clearA.statusCode).toBe(200);
+    expect(clearA.json().code).toBeUndefined();
+
+    const clearB = await app.inject({
+      method: "PATCH",
+      url: `/categories/${b.json().id}`,
+      headers: authHeader(ownerToken),
+      payload: { version: b.json().version, code: null },
+    });
+    expect(clearB.statusCode).toBe(200);
+    expect(clearB.json().code).toBeUndefined();
+  });
+
+  it("orders new siblings after existing ones, and /move swaps order with the adjacent sibling", async () => {
+    const parent = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Orden Padre" },
+    });
+    const parentId = parent.json().id;
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Primero", parentId },
+    });
+    const second = await app.inject({
+      method: "POST",
+      url: "/categories",
+      headers: authHeader(ownerToken),
+      payload: { name: "Segundo", parentId },
+    });
+    expect(first.json().order).toBe(0);
+    expect(second.json().order).toBe(1);
+
+    const moveUp = await app.inject({
+      method: "POST",
+      url: `/categories/${second.json().id}/move`,
+      headers: authHeader(ownerToken),
+      payload: { direction: "up" },
+    });
+    expect(moveUp.statusCode).toBe(204);
+
+    const list = await app.inject({ method: "GET", url: "/categories", headers: authHeader(ownerToken) });
+    const siblings = list
+      .json()
+      .items.filter((c: { parentId?: string }) => c.parentId === parentId)
+      .sort((a: { order: number }, b: { order: number }) => a.order - b.order);
+    expect(siblings[0].name).toBe("Segundo");
+    expect(siblings[1].name).toBe("Primero");
+
+    // "Segundo" ahora es el primero — no puede subir más.
+    const atEdge = await app.inject({
+      method: "POST",
+      url: `/categories/${second.json().id}/move`,
+      headers: authHeader(ownerToken),
+      payload: { direction: "up" },
+    });
+    expect(atEdge.statusCode).toBe(400);
+    expect(atEdge.json().error).toBe("already_at_edge");
+  });
 });
 
 describe("Marcas", () => {

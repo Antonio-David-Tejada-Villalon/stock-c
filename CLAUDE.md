@@ -2,9 +2,50 @@
 
 ## Estado actual (última actualización: 2026-08-06)
 
-Fases 1-11 aprobadas. Próxima fase por definir (Fase 12 — Notificaciones,
-o la adenda de Categorías anotada más abajo, según lo que el usuario
-prefiera empezar).
+**Adenda en curso: Categorías (código/ícono/color/imagen/orden), código
+completo, dos incidentes reales encontrados y corregidos en la
+verificación (permisos de rol y `order` sin backfill, ambos por
+`$setOnInsert` en `apps/api/src/db/seed.ts`), pendiente de que el
+usuario corra `pnpm --filter @stock-c/api seed` de nuevo y verifique en
+navegador que las flechas ▲/▼ ya reordenan.** Fases 1-11 aprobadas.
+Después de esta adenda sigue la **Fase 12 — Notificaciones** (orden
+elegido por el usuario).
+
+**Descartado:** el usuario había propuesto reemplazar los datos de
+ejemplo de ferretería por un árbol de categorías/productos de rubro
+almacén/supermercado — decidió que esa idea pertenece a otro proyecto,
+no a STOCK-C. Los datos de ejemplo del seed siguen siendo ferretería,
+sin cambios de contenido.
+
+**Adenda de Categorías (2026-08-06, sobre Fase 8)** (detalle completo en
+[docs/08-categorias-marcas-unidades.md](docs/08-categorias-marcas-unidades.md),
+sección "Adenda — Enriquecimiento de Categorías"): campos concretos, no
+un sistema EAV (decisión explícita del usuario) — `code` (único por
+empresa, opcional), `icon` (nombre de ícono de **lucide-react**, nueva
+dependencia, registro curado de ~40 en
+`apps/web/src/features/catalogs/categoryIcons.ts`), `color` (hex),
+`imageUrl` (solo URL — no hay object storage configurado en el proyecto,
+se pospuso construir subida real de archivos), y `order` manual
+(flechas ▲/▼ en vez de drag-and-drop, intercambia con el hermano
+adyacente vía `POST /categories/:id/move`, sin transacción de Mongo —
+bajo riesgo, no es data financiera). **Incidente real:** el primer
+intento de índice único+opcional para `code` usó `sparse: true`, que
+falló en cadena en los tests — un índice `sparse` *compuesto* no excluye
+un documento salvo que falten *todos* sus campos indexados, y
+`companyId` siempre está presente, así que dos categorías sin código
+chocaban igual (`code: null` duplicado). Se reprodujo aislado con un
+script descartable antes de aplicar el fix real:
+`partialFilterExpression`. 57 tests de backend en verde (54 previos + 3
+nuevos). **Segundo incidente real** (post-testing, ya en verificación
+de navegador): las flechas ▲/▼ no reordenaban nada — las 8 categorías
+sembradas en Fase 8 son anteriores al campo `order` y quedaron todas en
+el default `0` (`ensureCategories()` las upsertea con `$setOnInsert: {}`,
+que nunca toca un documento ya existente). Mismo patrón que el
+incidente de permisos de rol (ver Fase 8 más abajo): fix es `$set` en
+vez de `$setOnInsert` para `order`, con backfill secuencial por grupo
+de hermanos. Detalle completo en
+[docs/08-categorias-marcas-unidades.md](docs/08-categorias-marcas-unidades.md),
+adenda, sección "Revisión".
 
 **Fase 11 (Reportes) — resumen** (detalle completo en
 [docs/11-reportes.md](docs/11-reportes.md)): alcance confirmado con el
@@ -163,20 +204,18 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   opcional nuevo; `.find()` + agrupación en memoria en vez de
   `.aggregate()` (`tenantScopePlugin` no cubre agregación); sin permiso
   nuevo.
+- Enriquecimiento de Categorías (adenda sobre Fase 8): campos concretos
+  (`code`/`icon`/`color`/`imageUrl`/`order`), no EAV; `icon` vía
+  `lucide-react` con registro curado; `imageUrl` solo texto (sin subida
+  real, no hay object storage en el proyecto); `order` con flechas
+  ▲/▼, no drag-and-drop; único índice único-y-opcional del proyecto usa
+  `partialFilterExpression`, no `sparse` (ver incidente real arriba).
 
-**Pendiente anotado para después de Fase 11 (adenda sobre Fase 8, NO
-iniciada — decisión del usuario de posponerla, 2026-08-06):** ampliar
-Categorías con `código`, `ícono`, `color`, `imagen` y `orden` manual
-(hoy se listan alfabético) — campos concretos, **no** un sistema
-genérico de atributos dinámicos/EAV (el usuario eligió explícitamente
-esa opción; mismo criterio que ya usó Fase 8 al rechazar generalizar el
-formulario de Marca/Unidad). El árbol sin límite de profundidad de
-Fase 8 ya cubre jerarquías tipo Categoría/Subcategoría/Familia/Línea sin
-cambios — no hace falta (ni conviene) un campo "Nivel" fijo.
-
-**Próximo paso inmediato:** elegir entre la **Fase 12 — Notificaciones**
-o la adenda de Categorías anotada arriba (código/ícono/color/imagen/
-orden). Fase 11 ya está aprobada y commiteada.
+**Próximo paso inmediato:** verificación en navegador y aprobación del
+usuario para cerrar la adenda de Categorías — abrir `/categorias`,
+crear/editar una categoría con código/ícono/color/imagen, confirmar que
+un código repetido se rechaza, y probar las flechas ▲/▼ para reordenar
+hermanas. Después de aprobada, sigue la **Fase 12 — Notificaciones**.
 
 ## Modo de trabajo (obligatorio, no negociable)
 

@@ -92,6 +92,14 @@ export interface Category {
   id: string;
   name: string;
   parentId?: string;
+  /** Único por empresa cuando está presente. */
+  code?: string;
+  /** Nombre de ícono de lucide-react (ej. "Wrench"). */
+  icon?: string;
+  color?: string;
+  imageUrl?: string;
+  /** Orden manual, scoped a hermanos (mismo parentId). */
+  order: number;
   active: boolean;
   version: number;
   createdAt: string;

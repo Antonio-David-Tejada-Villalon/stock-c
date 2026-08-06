@@ -32,6 +32,10 @@ async function request<T>(path: string, accessToken: string, init?: RequestInit)
 export interface CategoryInput {
   name: string;
   parentId?: string;
+  code?: string;
+  icon?: string;
+  color?: string;
+  imageUrl?: string;
 }
 
 export function listCategories(accessToken: string) {
@@ -45,13 +49,27 @@ export function createCategory(accessToken: string, input: CategoryInput) {
 export function updateCategory(
   accessToken: string,
   id: string,
-  input: Partial<{ name: string; parentId: string | null }> & { version: number; active?: boolean },
+  input: Partial<{
+    name: string;
+    parentId: string | null;
+    code: string | null;
+    icon: string | null;
+    color: string | null;
+    imageUrl: string | null;
+  }> & { version: number; active?: boolean },
 ) {
   return request<Category>(`/categories/${id}`, accessToken, { method: "PATCH", body: JSON.stringify(input) });
 }
 
 export function deactivateCategory(accessToken: string, id: string) {
   return request<void>(`/categories/${id}`, accessToken, { method: "DELETE" });
+}
+
+export function moveCategory(accessToken: string, id: string, direction: "up" | "down") {
+  return request<void>(`/categories/${id}/move`, accessToken, {
+    method: "POST",
+    body: JSON.stringify({ direction }),
+  });
 }
 
 // --- Marcas ---

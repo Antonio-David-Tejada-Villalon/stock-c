@@ -37,9 +37,14 @@ async function ensureSystemRoles() {
 
   const roles = new Map<string, string>();
   for (const spec of specs) {
+    // `$set` (no `$setOnInsert`): un rol de sistema ya existente tiene que
+    // sincronizar sus permisos en cada corrida del seed, no solo al
+    // crearse — si no, un rol creado en una fase temprana nunca recibe
+    // los permisos que se agregan en fases posteriores (bug real
+    // encontrado al verificar la adenda de Categorías, ver docs/08).
     const role = await Role.findOneAndUpdate(
       { companyId: null, name: spec.name, isSystem: true },
-      { $setOnInsert: { permissions: spec.permissions } },
+      { $set: { permissions: spec.permissions } },
       { upsert: true, new: true },
     );
     roles.set(spec.name, role._id.toString());
@@ -56,27 +61,34 @@ async function ensureSystemRoles() {
 async function ensureCategories(companyId: string): Promise<Map<string, string>> {
   const byName = new Map<string, string>();
 
+  // `$set` (no `$setOnInsert`) en `order`: las categorías de este seed se
+  // crearon en Fase 8, antes de que existiera el campo `order` (adenda de
+  // Categorías) — todas quedaron con el default 0, así que las flechas
+  // ▲/▼ intercambiaban 0 por 0 y no se veía ningún cambio. Reasignar el
+  // order en cada corrida del seed backfillea las categorías ya existentes.
   const root = await Category.findOneAndUpdate(
     { companyId, name: "Ferretería", parentId: null },
-    { $setOnInsert: {} },
+    { $set: { order: 0 } },
     { upsert: true, new: true },
   );
   byName.set("Ferretería", root._id.toString());
 
   const children = ["Herramientas manuales", "Herramientas eléctricas", "Tornillería y fijaciones"];
-  for (const name of children) {
+  for (const [index, name] of children.entries()) {
     const doc = await Category.findOneAndUpdate(
       { companyId, name, parentId: root._id },
-      { $setOnInsert: {} },
+      { $set: { order: index } },
       { upsert: true, new: true },
     );
     byName.set(name, doc._id.toString());
   }
 
-  for (const name of ["Pinturería", "Jardín"]) {
+  const topLevelSiblings = ["Pinturería", "Jardín"];
+  for (const [index, name] of topLevelSiblings.entries()) {
     const doc = await Category.findOneAndUpdate(
       { companyId, name, parentId: null },
-      { $setOnInsert: {} },
+      // +1 porque "Ferretería" ya ocupa el order 0 en este mismo nivel (parentId: null)
+      { $set: { order: index + 1 } },
       { upsert: true, new: true },
     );
     byName.set(name, doc._id.toString());

@@ -6,9 +6,11 @@ import { createCategoryService, CategoryError } from "./category.service.js";
 import {
   CreateCategoryBodySchema,
   ListCategoriesQuerySchema,
+  MoveCategoryBodySchema,
   UpdateCategoryBodySchema,
   type CreateCategoryBody,
   type ListCategoriesQuery,
+  type MoveCategoryBody,
   type UpdateCategoryBody,
 } from "./category.schemas.js";
 
@@ -24,6 +26,15 @@ function errorToResponse(err: unknown): { status: number; body: { error: string;
       return {
         status: 400,
         body: { error: "cycle", message: "Una categoría no puede ser su propio ancestro" },
+      };
+    }
+    if (err.code === "duplicate_code") {
+      return { status: 409, body: { error: "duplicate_code", message: "Ya existe una categoría con ese código" } };
+    }
+    if (err.code === "already_at_edge") {
+      return {
+        status: 400,
+        body: { error: "already_at_edge", message: "Esta categoría ya está en un extremo del orden" },
       };
     }
     return {
@@ -98,6 +109,23 @@ export async function categoryRoutes(app: FastifyInstance) {
     async (request, reply) => {
       try {
         await service.deactivate(request.user.companyId, request.params.id);
+        return reply.code(204).send();
+      } catch (err) {
+        const { status, body } = errorToResponse(err);
+        return reply.code(status).send(body);
+      }
+    },
+  );
+
+  app.post<{ Params: { id: string }; Body: MoveCategoryBody }>(
+    "/categories/:id/move",
+    {
+      preHandler: [authenticate, authorize(PERMISSIONS.CATEGORY_UPDATE)],
+      schema: { body: MoveCategoryBodySchema },
+    },
+    async (request, reply) => {
+      try {
+        await service.move(request.user.companyId, request.params.id, request.body.direction);
         return reply.code(204).send();
       } catch (err) {
         const { status, body } = errorToResponse(err);
