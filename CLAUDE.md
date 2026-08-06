@@ -107,10 +107,10 @@ nunca se subieron a GitHub. Faltan **Vercel** y **Render**.
 **Fase 7 commiteada y pusheada a `main`** (commit `a3c2ce1`), CI en
 verde (`pnpm install/lint/typecheck/build/test`) —
 [run 30980196759](https://github.com/Antonio-David-Tejada-Villalon/stock-c/actions/runs/30980196759).
-CI de Fase 8 (commit `8088447`), su adenda (commit `605e54d`) y Fase 9
-con la suya (commit `a013b7f`) no se verificó por falta de `gh` CLI en
-esta sesión — revisar manualmente en GitHub Actions si hace falta
-confirmar. Fase 10 todavía no está commiteada.
+CI de Fase 8 en adelante (`8088447`, `605e54d`, `a013b7f`, `d9edaba`,
+`41c7cea`, `eb81add`, `6385d9b` — todos pusheados a `main`) no se
+verificó manualmente por falta de `gh` CLI en esta sesión — revisar en
+GitHub Actions si hace falta confirmar.
 
 **Stack y decisiones ya confirmadas por el usuario** (no volver a
 preguntar, solo verificar que sigan vigentes si algo no cuadra):
