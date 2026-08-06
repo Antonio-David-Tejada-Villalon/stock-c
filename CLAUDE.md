@@ -30,7 +30,7 @@ del sistema. 54 tests de backend en verde (46 previos + 8 nuevos).
 También se conectó la tarjeta "Stock bajo" del Panel (placeholder desde
 la adenda de Fase 9) a `DashboardSummary.lowStockCount`, reutilizando
 `reportService.lowStock()`. Verificada en navegador y aprobada por el
-usuario.
+usuario; commiteada (`eb81add`).
 
 **Fase 10 (Offline First, recorte inicial) — resumen** (detalle completo
 en [docs/10-offline-first.md](docs/10-offline-first.md)): sobre la
