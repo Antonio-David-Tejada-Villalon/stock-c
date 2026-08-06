@@ -103,6 +103,7 @@ describe("GET /dashboard/summary", () => {
       activeUserCount: 2,
       productCount: 0,
       movementsTodayCount: 0,
+      lowStockCount: 0,
       recentMovements: [],
     });
   });
@@ -114,6 +115,7 @@ describe("GET /dashboard/summary", () => {
     const { User } = await import("../src/db/models/user.model.js");
     const { Product } = await import("../src/db/models/product.model.js");
     const { StockMovement } = await import("../src/db/models/stockMovement.model.js");
+    const { StockLevel } = await import("../src/db/models/stockLevel.model.js");
     const { hashPassword } = await import("../src/modules/auth/password.js");
 
     const company = await Company.create({ name: "Single Branch Co", slug: "single-branch-co" });
@@ -140,6 +142,16 @@ describe("GET /dashboard/summary", () => {
       createdBy: role._id,
       clientCreatedAt: new Date(),
     });
+    // Producto con umbral cargado y stock por debajo — debe contar en
+    // lowStockCount (Fase 11).
+    const lowStockProduct = await Product.create({
+      companyId: company._id,
+      sku: "DASH-002",
+      name: "Bajo stock",
+      price: "1.00",
+      minStock: "10",
+    });
+    await StockLevel.create({ companyId: company._id, branchId: branch._id, productId: lowStockProduct._id, quantity: "3" });
 
     const login = await app.inject({
       method: "POST",
@@ -156,6 +168,7 @@ describe("GET /dashboard/summary", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.movementsTodayCount).toBe(1);
+    expect(body.lowStockCount).toBe(1);
     expect(body.recentMovements).toHaveLength(1);
     expect(body.recentMovements[0]).toMatchObject({
       productName: "Producto Dashboard",

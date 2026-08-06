@@ -14,6 +14,9 @@ export interface ProductDocument {
   barcode?: string;
   price: Types.Decimal128;
   cost?: Types.Decimal128;
+  /** Umbral para el reporte de stock bajo (Fase 11) — opcional, mismo
+   * patrón que `cost`. Sin cargar, el producto no entra al reporte. */
+  minStock?: Types.Decimal128;
   images: string[];
   active: boolean;
   version: number;
@@ -36,6 +39,7 @@ const productSchema = new Schema<ProductDocument>(
     barcode: { type: String, trim: true },
     price: { type: Schema.Types.Decimal128, required: true },
     cost: { type: Schema.Types.Decimal128 },
+    minStock: { type: Schema.Types.Decimal128 },
     images: { type: [String], default: [] },
     active: { type: Boolean, required: true, default: true },
     version: { type: Number, required: true, default: 0 },

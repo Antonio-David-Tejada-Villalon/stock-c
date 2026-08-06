@@ -35,10 +35,7 @@ export function DashboardPage() {
         <StatCard label="Sucursales" value={summary?.branchCount} />
         <StatCard label="Usuarios del equipo" value={summary?.activeUserCount} />
         <StatCard label="Productos activos" value={summary?.productCount} />
-        <StatCard
-          label="Stock bajo"
-          emptyReason="Necesita un umbral de stock mínimo por producto — todavía no diseñado"
-        />
+        <StatCard label="Stock bajo" value={summary?.lowStockCount} />
         <StatCard label="Movimientos hoy" value={summary?.movementsTodayCount} />
       </div>
 

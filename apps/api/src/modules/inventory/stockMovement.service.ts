@@ -1,8 +1,8 @@
 import mongoose, { Types } from "mongoose";
-import { Branch, type BranchDocument } from "../../db/models/branch.model.js";
 import { Product } from "../../db/models/product.model.js";
 import { StockMovement, type StockMovementDocument } from "../../db/models/stockMovement.model.js";
 import { StockLevel, type StockLevelDocument } from "../../db/models/stockLevel.model.js";
+import { resolveActiveBranch, NoActiveBranchError } from "../../db/helpers/resolveActiveBranch.js";
 import type { CreateMovementBody, ListMovementsQuery } from "./stockMovement.schemas.js";
 
 export class InventoryError extends Error {
@@ -64,25 +64,21 @@ function decodeGeneralCursor(raw: string): GeneralCursor {
   return parsed as GeneralCursor;
 }
 
-/**
- * Resuelve la única sucursal activa de la empresa — Fase 9 asume
- * sucursal única implícita (decisión explícita del usuario, ver
- * docs/09-control-inventario.md, sección 2). Falla ruidosamente en vez
- * de elegir "cualquiera" si hay 0 o más de 1 sucursal activa.
- */
-async function resolveActiveBranch(companyId: string): Promise<BranchDocument> {
-  const branches = await Branch.find({ companyId, active: true }).limit(2);
-  const [branch] = branches;
-  if (branches.length !== 1 || !branch) {
-    throw new InventoryError("no_active_branch");
+/** Traduce el error genérico del helper compartido al código que ya
+ * espera `errorToResponse` en stockMovement.routes.ts. */
+async function resolveBranch(companyId: string) {
+  try {
+    return await resolveActiveBranch(companyId);
+  } catch (err) {
+    if (err instanceof NoActiveBranchError) throw new InventoryError("no_active_branch");
+    throw err;
   }
-  return branch;
 }
 
 export function createInventoryService() {
   return {
     async createMovement(companyId: string, userId: string, body: CreateMovementBody) {
-      const branch = await resolveActiveBranch(companyId);
+      const branch = await resolveBranch(companyId);
 
       const product = await Product.findOne({ companyId, _id: body.productId });
       if (!product) throw new InventoryError("not_found");
@@ -173,7 +169,7 @@ export function createInventoryService() {
 
     async listMovements(companyId: string, query: ListMovementsQuery) {
       const limit = query.limit ?? DEFAULT_LIMIT;
-      const branch = await resolveActiveBranch(companyId);
+      const branch = await resolveBranch(companyId);
 
       if (query.productId) {
         // Kardex real de un producto: orden por `sequence`, denso y sin
@@ -221,7 +217,7 @@ export function createInventoryService() {
     },
 
     async getStockLevels(companyId: string, productIds: string[]) {
-      const branch = await resolveActiveBranch(companyId);
+      const branch = await resolveBranch(companyId);
       const docs = await StockLevel.find({
         companyId,
         branchId: branch._id,

@@ -50,6 +50,7 @@ export interface ProductInput {
   barcode?: string;
   price: string;
   cost?: string;
+  minStock?: string;
 }
 
 export function createProduct(accessToken: string, input: ProductInput) {

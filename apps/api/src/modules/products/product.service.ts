@@ -27,6 +27,7 @@ function toView(doc: ProductDocument) {
     barcode: doc.barcode,
     price: doc.price.toString(),
     cost: doc.cost?.toString(),
+    minStock: doc.minStock?.toString(),
     active: doc.active,
     version: doc.version,
     createdAt: doc.createdAt.toISOString(),
@@ -172,6 +173,7 @@ export function createProductService() {
           barcode: body.barcode,
           price: body.price,
           cost: body.cost,
+          minStock: body.minStock,
           updatedBy: userId,
         });
         return toView(doc);

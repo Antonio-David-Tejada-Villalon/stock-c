@@ -1,63 +1,68 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
-## Estado actual (última actualización: 2026-08-05)
+## Estado actual (última actualización: 2026-08-06)
 
-**Fase en curso: 10 — Offline First (recorte inicial: Productos +
-Movimientos), código completo, pendiente de verificación en navegador y
-aprobación del usuario.** Fases 1-9 aprobadas.
+Fases 1-11 aprobadas. Próxima fase por definir (Fase 12 — Notificaciones,
+o la adenda de Categorías anotada más abajo, según lo que el usuario
+prefiera empezar).
 
-**Adenda de branding (2026-08-05, sobre Fase 2 — detalle completo en
-[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md), sección "Adenda —
-Refresh de marca"):** el usuario proveyó `stockc_brand_guidelines.webp` y
-pidió aplicarla. `--accent` pasa de índigo a **Electric Blue** (`#2663EB`/
-`#5B8DF5`) — el Naranja de marca (`#FF6B00`) no puede ser el acento único
-porque texto blanco sobre él falla WCAG AA (~2.86:1); el naranja queda
-como `--brand-mark`, exclusivo del isotipo/app icon, nunca en botones o
-texto. `--success`/`--warning`/`--danger` sin cambios (son "un sistema
-aparte" según la Fase 2 original). Tipografía nativa del SO reemplazada
-por **Manrope + Inter autohospedadas** (`@fontsource`, sin CDN — respeta
-offline-first de Fase 10), confirmado explícitamente por el usuario antes
-de tocar esa decisión ya aprobada. Isotipo hexagonal nuevo
-(`packages/ui/src/Logo.tsx`, recreado en SVG — no había vector original)
-en el sidebar y como favicon; manifest de PWA actualizado con colores de
-marca. **Toggle de tema claro/oscuro** implementado (era diseño ya
-especificado en Fase 2 §6, nunca construido) — elección explícita en
-`localStorage` gana sobre el sistema, sin elección sigue
-`prefers-color-scheme` en vivo, script inline anti-flash en
-`index.html`, botón sol/luna en la topbar
-(`packages/ui/src/ThemeToggle.tsx`). No se generaron íconos PNG
-multi-resolución (instalabilidad PWA sigue fuera de alcance) ni se
-retocó cada heading de cada pantalla individualmente (`font-heading`
-queda disponible para aplicarse screen-by-screen si se pide). Guía de
-marca original archivada en
-[docs/assets/stockc-brand-guidelines.webp](docs/assets/stockc-brand-guidelines.webp).
-Pendiente: verificación visual del usuario.
+**Fase 11 (Reportes) — resumen** (detalle completo en
+[docs/11-reportes.md](docs/11-reportes.md)): alcance confirmado con el
+usuario, los 4 reportes con exportación a CSV — **Valorización de
+inventario** (stock × costo por producto/categoría/marca, excluye
+activos sin costo cargado), **Movimientos por rango de fechas**
+(agregado de todos los productos, filtrable por tipo/fecha/categoría,
+tope de 5000 resultados), **Resumen por categoría/marca** (activos/
+inactivos, distribución de stock) y **Stock bajo** (nuevo campo
+`Product.minStock`, opcional — sin cargarlo, el producto no participa,
+nunca se asume 0). Los 4 servicios usan `.find({ companyId, ... })` +
+agrupación en memoria, nunca `.aggregate()` — `tenantScopePlugin` (el
+cinturón de seguridad multiempresa) no cubre el pipeline de agregación
+de Mongoose, así que usar `.find()` mantiene la protección existente en
+vez de duplicarla a mano. Nueva librería `lib/decimal.ts` (bigint de
+punto fijo, 4 decimales) para sumar/multiplicar costos y cantidades sin
+arrastre de error de punto flotante. `resolveActiveBranch` se extrajo a
+un helper compartido (`db/helpers/`) porque Fase 11 lo necesitaba en los
+4 servicios, no solo en Inventario. CSV se genera en el cliente sobre
+los datos ya cargados en pantalla (sin ruta de API nueva por reporte).
+Sin permiso nuevo — mismo criterio que el resto de los `GET` de lectura
+del sistema. 54 tests de backend en verde (46 previos + 8 nuevos).
+También se conectó la tarjeta "Stock bajo" del Panel (placeholder desde
+la adenda de Fase 9) a `DashboardSummary.lowStockCount`, reutilizando
+`reportService.lowStock()`. Verificada en navegador y aprobada por el
+usuario.
 
 **Fase 10 (Offline First, recorte inicial) — resumen** (detalle completo
 en [docs/10-offline-first.md](docs/10-offline-first.md)): sobre la
 arquitectura de sync híbrida ya decidida en Fase 1 (log de eventos para
-stock + LWW para datos maestros), **recorte explícito del usuario**:
-Productos queda **solo lectura offline** (catálogo + stock cacheados en
-IndexedDB vía Dexie); Movimientos queda **con alta en cola offline**
-(*outbox* — siempre se escribe ahí primero, esté online o no, en vez de
-tener dos caminos de código distintos). Categorías/Marcas/Unidades y el
-Panel siguen sin caché offline (decisión explícita). **UI de conflictos
-LWW diseñada pero no construida** (simple: descartar o sobrescribir,
-decisión explícita del usuario) — este recorte no tiene ninguna edición
-offline de datos maestros que la dispare, queda lista para cuando se
-extienda el alcance. La falla real de este recorte (un movimiento
-encolado offline que el servidor rechaza al sincronizar, ej.
-`insufficient_stock`) cae en una sección "Con error" en `/movimientos`
-con Reintentar/Descartar — nunca se descarta en silencio. `GET /products`
-suma un modo delta (`?updatedSince=`) reutilizando la ruta existente, sin
-módulo de sync nuevo. Service Worker vía `vite-plugin-pwa`, solo
-precachea el shell de la app — a propósito sin cachear respuestas de la
-API (ese es trabajo de Dexie, no del SW). Primera vez que `apps/web`
-tiene test runner (Vitest + `fake-indexeddb`) — 5 tests nuevos del motor
-de sync. 46 tests de backend en verde (44 previos + 2 del modo delta).
-**Código commiteado junto con la adenda de branding (commit `d9edaba`) —
-sigue pendiente la verificación en navegador y aprobación del usuario
-para marcar la fase como aprobada.**
+stock + LWW para datos maestros), recorte explícito del usuario:
+Productos solo lectura offline (Dexie); Movimientos con alta en cola
+offline (*outbox*, siempre, online u offline, reutiliza
+`clientMutationId` de Fase 9 para idempotencia). Un movimiento rechazado
+al sincronizar (ej. `insufficient_stock`) cae en "Con error" en
+`/movimientos` con Reintentar/Descartar — nunca en silencio. `GET
+/products` suma modo delta (`?updatedSince=`). Service Worker
+(`vite-plugin-pwa`) precachea solo el shell de la app. Primera vez que
+`apps/web` tiene test runner (Vitest + `fake-indexeddb`). Verificada en
+navegador y aprobada por el usuario; commiteada (`d9edaba`).
+
+**Adenda de branding (2026-08-05, sobre Fase 2)** (detalle completo en
+[docs/02-diseno-ui-ux.md](docs/02-diseno-ui-ux.md), sección "Adenda —
+Refresh de marca"): aplicó `stockc_brand_guidelines.webp` (archivada en
+[docs/assets/stockc-brand-guidelines.webp](docs/assets/stockc-brand-guidelines.webp)).
+`--accent` pasa de índigo a **Electric Blue** (`#2663EB`/`#5B8DF5`) — el
+Naranja de marca (`#FF6B00`) no puede ser el acento único porque texto
+blanco sobre él falla WCAG AA (~2.86:1); el naranja queda como
+`--brand-mark`, exclusivo del isotipo/app icon. Tipografía nativa del SO
+reemplazada por **Manrope + Inter autohospedadas**. Isotipo hexagonal
+nuevo (`packages/ui/src/Logo.tsx`) en sidebar y favicon. **Toggle de
+tema claro/oscuro** implementado (diseño ya especificado en Fase 2 §6,
+nunca construido) — `localStorage` gana sobre el sistema, sin elección
+sigue `prefers-color-scheme` en vivo, anti-flash en `index.html`, botón
+sol/luna en la topbar. No se generaron íconos PNG multi-resolución
+(instalabilidad PWA sigue fuera de alcance) ni se retocó cada heading
+individualmente. Verificada en navegador y aprobada por el usuario;
+commiteada (`d9edaba` + `41c7cea`).
 
 **Fase 9 (Control de inventario) — resumen breve** (detalle completo en
 [docs/09-control-inventario.md](docs/09-control-inventario.md)): registro
@@ -149,13 +154,29 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   Categorías/Marcas/Unidades y Panel sin offline todavía; UI de
   conflictos LWW diseñada (descartar o sobrescribir, sin editor por
   campo) pero no construida — este recorte no la dispara.
+- Branding (adenda sobre Fase 2): `--accent` = Electric Blue (único,
+  marca+interacción); Naranja de marca solo en el isotipo
+  (`--brand-mark`); Manrope+Inter autohospedadas; toggle de tema
+  claro/oscuro implementado.
+- Reportes (Fase 11): 4 reportes (valorización, movimientos por rango,
+  resumen por categoría/marca, stock bajo) con CSV; `Product.minStock`
+  opcional nuevo; `.find()` + agrupación en memoria en vez de
+  `.aggregate()` (`tenantScopePlugin` no cubre agregación); sin permiso
+  nuevo.
 
-**Próximo paso inmediato:** verificación en navegador y aprobación del
-usuario para cerrar la Fase 10 (código completo, sin commitear) — con
-las DevTools en modo offline: navegar Productos con el caché, registrar
-un movimiento, reconectar y confirmar que sincroniza solo, y forzar un
-rechazo para ver la sección "Con error". Después de aprobada, sigue la
-**Fase 11 — Reportes**.
+**Pendiente anotado para después de Fase 11 (adenda sobre Fase 8, NO
+iniciada — decisión del usuario de posponerla, 2026-08-06):** ampliar
+Categorías con `código`, `ícono`, `color`, `imagen` y `orden` manual
+(hoy se listan alfabético) — campos concretos, **no** un sistema
+genérico de atributos dinámicos/EAV (el usuario eligió explícitamente
+esa opción; mismo criterio que ya usó Fase 8 al rechazar generalizar el
+formulario de Marca/Unidad). El árbol sin límite de profundidad de
+Fase 8 ya cubre jerarquías tipo Categoría/Subcategoría/Familia/Línea sin
+cambios — no hace falta (ni conviene) un campo "Nivel" fijo.
+
+**Próximo paso inmediato:** elegir entre la **Fase 12 — Notificaciones**
+o la adenda de Categorías anotada arriba (código/ícono/color/imagen/
+orden). Fase 11 ya está aprobada y commiteada.
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -215,8 +236,8 @@ accesibilidad WCAG 2.2 AA.
 | 7 | CRUD de productos | ✅ aprobada |
 | 8 | Categorías, marcas, unidades | ✅ aprobada |
 | 9 | Control de inventario (entradas, salidas, kardex) | ✅ aprobada |
-| 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ⚪ pendiente |
-| 11 | Reportes | ⚪ pendiente |
+| 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ✅ aprobada |
+| 11 | Reportes | ✅ aprobada |
 | 12 | Notificaciones | ⚪ pendiente |
 | 13 | Configuración general | ⚪ pendiente |
 | 14 | Optimización | ⚪ pendiente |

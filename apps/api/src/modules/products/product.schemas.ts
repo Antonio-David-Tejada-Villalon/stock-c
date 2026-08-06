@@ -11,6 +11,7 @@ export const ProductViewSchema = Type.Object({
   barcode: Type.Optional(Type.String()),
   price: Type.String(),
   cost: Type.Optional(Type.String()),
+  minStock: Type.Optional(Type.String()),
   active: Type.Boolean(),
   version: Type.Number(),
   createdAt: Type.String(),
@@ -27,6 +28,7 @@ export const CreateProductBodySchema = Type.Object({
   barcode: Type.Optional(Type.String({ maxLength: 64 })),
   price: Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" }),
   cost: Type.Optional(Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" })),
+  minStock: Type.Optional(Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" })),
 });
 export type CreateProductBody = Static<typeof CreateProductBodySchema>;
 
@@ -44,6 +46,7 @@ export const UpdateProductBodySchema = Type.Object({
   barcode: Type.Optional(Type.String({ maxLength: 64 })),
   price: Type.Optional(Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" })),
   cost: Type.Optional(Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" })),
+  minStock: Type.Optional(Type.String({ pattern: "^\\d+(\\.\\d{1,4})?$" })),
   active: Type.Optional(Type.Boolean()),
 });
 export type UpdateProductBody = Static<typeof UpdateProductBodySchema>;

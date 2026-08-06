@@ -4,8 +4,12 @@ import { User } from "../../db/models/user.model.js";
 import { Product } from "../../db/models/product.model.js";
 import { StockMovement, type StockMovementDocument } from "../../db/models/stockMovement.model.js";
 import { authenticate } from "../../middleware/authenticate.js";
+import { NoActiveBranchError } from "../../db/helpers/resolveActiveBranch.js";
+import { createReportService } from "../reports/report.service.js";
 
 export async function dashboardRoutes(app: FastifyInstance) {
+  const reportService = createReportService();
+
   app.get(
     "/dashboard/summary",
     { preHandler: authenticate },
@@ -54,7 +58,17 @@ export async function dashboardRoutes(app: FastifyInstance) {
         createdAt: d.createdAt.toISOString(),
       }));
 
-      return { branchCount, activeUserCount, productCount, movementsTodayCount, recentMovements };
+      // Reutiliza el servicio de reportes (Fase 11) en vez de reimplementar
+      // el cálculo — mismo criterio de "sin sucursal activa, degradar a 0"
+      // que el resto de este endpoint, no romper el panel.
+      let lowStockCount = 0;
+      try {
+        lowStockCount = (await reportService.lowStock(companyId)).items.length;
+      } catch (err) {
+        if (!(err instanceof NoActiveBranchError)) throw err;
+      }
+
+      return { branchCount, activeUserCount, productCount, movementsTodayCount, lowStockCount, recentMovements };
     },
   );
 }

@@ -19,6 +19,7 @@ interface FormState {
   barcode: string;
   price: string;
   cost: string;
+  minStock: string;
   active: boolean;
 }
 
@@ -32,6 +33,7 @@ const emptyState: FormState = {
   barcode: "",
   price: "",
   cost: "",
+  minStock: "",
   active: true,
 };
 
@@ -46,6 +48,7 @@ function fromProduct(product: Product): FormState {
     barcode: product.barcode ?? "",
     price: product.price,
     cost: product.cost ?? "",
+    minStock: product.minStock ?? "",
     active: product.active,
   };
 }
@@ -89,6 +92,9 @@ export function ProductFormDrawer({
     if (!form.name.trim()) next.name = "El nombre es obligatorio";
     if (!DECIMAL_PATTERN.test(form.price)) next.price = "Precio inválido (ej. 1250.00)";
     if (form.cost && !DECIMAL_PATTERN.test(form.cost)) next.cost = "Costo inválido (ej. 800.00)";
+    if (form.minStock && !DECIMAL_PATTERN.test(form.minStock)) {
+      next.minStock = "Stock mínimo inválido (ej. 10)";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -106,6 +112,7 @@ export function ProductFormDrawer({
         barcode: form.barcode.trim() || undefined,
         price: form.price,
         cost: form.cost || undefined,
+        minStock: form.minStock || undefined,
       };
       const saved = product
         ? await updateProduct(accessToken, product.id, {
@@ -235,7 +242,7 @@ export function ProductFormDrawer({
           />
         </FormField>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <FormField label="Precio" htmlFor="p-price" error={errors.price}>
             <Input
               id="p-price"
@@ -252,6 +259,16 @@ export function ProductFormDrawer({
               invalid={!!errors.cost}
               value={form.cost}
               onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
+            />
+          </FormField>
+          <FormField label="Stock mínimo" htmlFor="p-min-stock" error={errors.minStock}>
+            <Input
+              id="p-min-stock"
+              inputMode="decimal"
+              invalid={!!errors.minStock}
+              placeholder="Sin umbral"
+              value={form.minStock}
+              onChange={(e) => setForm((f) => ({ ...f, minStock: e.target.value }))}
             />
           </FormField>
         </div>

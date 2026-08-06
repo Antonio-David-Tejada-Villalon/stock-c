@@ -8,6 +8,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ProductsPage } from "./pages/ProductsPage";
 import { CatalogsPage } from "./pages/CatalogsPage";
 import { MovementsPage } from "./pages/MovementsPage";
+import { ReportsPage } from "./pages/ReportsPage";
 import { ComingSoon } from "./pages/ComingSoon";
 
 export function App() {
@@ -28,7 +29,7 @@ export function App() {
               <Route path="/productos" element={<ProductsPage />} />
               <Route path="/categorias" element={<CatalogsPage />} />
               <Route path="/movimientos" element={<MovementsPage />} />
-              <Route path="/reportes" element={<ComingSoon title="Reportes" phase="Fase 11" />} />
+              <Route path="/reportes" element={<ReportsPage />} />
               <Route
                 path="/configuracion"
                 element={<ComingSoon title="Configuración" phase="Fase 13" />}
