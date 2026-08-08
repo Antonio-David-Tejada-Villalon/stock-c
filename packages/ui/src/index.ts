@@ -37,4 +37,7 @@ export { Logo, LogoMark } from "./Logo";
 export type { LogoProps, LogoMarkProps } from "./Logo";
 export { ThemeToggle } from "./ThemeToggle";
 export type { ThemeToggleProps } from "./ThemeToggle";
+
+export { NotificationBell } from "./NotificationBell";
+export type { NotificationBellProps, NotificationItem } from "./NotificationBell";
 export { cn } from "./cn";

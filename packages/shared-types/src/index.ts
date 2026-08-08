@@ -255,3 +255,25 @@ export interface LowStockItem {
 export interface LowStockReport {
   items: LowStockItem[];
 }
+
+// Notificaciones (Fase 12) — ver docs/12-notificaciones.md.
+
+export type NotificationType = "low_stock" | "movement_rejected";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  productId?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  items: Notification[];
+  nextCursor: string | null;
+}
+
+export interface UnreadNotificationCount {
+  count: number;
+}

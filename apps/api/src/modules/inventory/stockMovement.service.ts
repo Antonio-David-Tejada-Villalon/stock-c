@@ -1,8 +1,10 @@
 import mongoose, { Types } from "mongoose";
-import { Product } from "../../db/models/product.model.js";
+import { Product, type ProductDocument } from "../../db/models/product.model.js";
 import { StockMovement, type StockMovementDocument } from "../../db/models/stockMovement.model.js";
 import { StockLevel, type StockLevelDocument } from "../../db/models/stockLevel.model.js";
 import { resolveActiveBranch, NoActiveBranchError } from "../../db/helpers/resolveActiveBranch.js";
+import { createNotification } from "../notifications/notification.service.js";
+import { addDecimal, compareDecimal } from "../../lib/decimal.js";
 import type { CreateMovementBody, ListMovementsQuery } from "./stockMovement.schemas.js";
 
 export class InventoryError extends Error {
@@ -40,6 +42,35 @@ function toStockLevelView(productId: string, doc: StockLevelDocument | null) {
 
 function isDuplicateKeyError(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: number }).code === 11000;
+}
+
+/**
+ * Notifica solo en la transición de "ok" a "bajo" (no en cada movimiento
+ * mientras ya está bajo) — mismo umbral `<=` que
+ * `reportService.lowStock()` (Fase 11). Se llama después de que la
+ * transacción del movimiento ya confirmó — un fallo acá no debe hacer
+ * rollback de un movimiento que sí se aplicó. Ver docs/12-notificaciones.md,
+ * sección 2.
+ */
+async function notifyIfCrossedLowStock(
+  companyId: string,
+  product: ProductDocument,
+  previousQtyStr: string,
+  deltaStr: string,
+): Promise<void> {
+  if (!product.minStock) return;
+  const minStock = product.minStock.toString();
+  const newQtyStr = addDecimal(previousQtyStr, deltaStr);
+  const wasOk = compareDecimal(previousQtyStr, minStock) > 0;
+  const isLowNow = compareDecimal(newQtyStr, minStock) <= 0;
+  if (wasOk && isLowNow) {
+    await createNotification(
+      companyId,
+      "low_stock",
+      `Stock bajo: «${product.name}» quedó en ${newQtyStr} (mínimo ${minStock}).`,
+      product._id.toString(),
+    );
+  }
 }
 
 interface GeneralCursor {
@@ -100,6 +131,7 @@ export function createInventoryService() {
       try {
         let movementDoc: StockMovementDocument | undefined;
         let levelDoc: StockLevelDocument | undefined;
+        let previousQtyStr = "0";
 
         await session.withTransaction(async () => {
           const existing = await StockLevel.findOne({
@@ -108,9 +140,11 @@ export function createInventoryService() {
             productId: body.productId,
           }).session(session);
 
+          previousQtyStr = existing ? existing.quantity.toString() : "0";
+
           // Comparación en memoria solo para decidir si bloquear — el
           // valor guardado sale siempre del $inc nativo de Mongo.
-          const current = existing ? Number(existing.quantity.toString()) : 0;
+          const current = Number(previousQtyStr);
           if (current + Number(deltaStr) < 0) {
             throw new InventoryError("insufficient_stock");
           }
@@ -142,6 +176,8 @@ export function createInventoryService() {
           movementDoc = created[0];
         });
 
+        await notifyIfCrossedLowStock(companyId, product, previousQtyStr, deltaStr);
+
         return {
           movement: toMovementView(movementDoc!),
           stockLevel: toStockLevelView(body.productId, levelDoc!),
@@ -160,6 +196,19 @@ export function createInventoryService() {
               replayed: true,
             };
           }
+        }
+        // `source: "sync"` distingue un movimiento que llega del outbox
+        // offline (Fase 10) de uno tipeado en el formulario online — el
+        // segundo ya muestra el error al instante, no necesita notificación
+        // (ver docs/12-notificaciones.md, sección 2).
+        if (err instanceof InventoryError && err.code === "insufficient_stock" && body.source === "sync") {
+          await createNotification(
+            companyId,
+            "movement_rejected",
+            `No se pudo sincronizar un movimiento de «${product.name}»: dejaría el stock en negativo.`,
+            body.productId,
+            body.clientMutationId,
+          );
         }
         throw err;
       } finally {

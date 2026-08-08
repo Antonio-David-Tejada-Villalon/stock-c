@@ -100,6 +100,7 @@ export async function pushOutbox(accessToken: string): Promise<void> {
         reason: movement.reason,
         reference: movement.reference,
         clientMutationId: movement.clientMutationId,
+        source: "sync",
       });
       await db.outboxMovements.delete(movement.localId);
     } catch (err) {

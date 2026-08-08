@@ -33,6 +33,9 @@ export interface CreateMovementInput {
   reason?: string;
   reference?: string;
   clientMutationId: string;
+  /** Presente solo cuando lo manda el motor de sync offline (Fase 10) — ver
+   * docs/12-notificaciones.md, sección 2. */
+  source?: "sync";
 }
 
 export function createMovement(accessToken: string, input: CreateMovementInput) {

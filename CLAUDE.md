@@ -2,14 +2,36 @@
 
 ## Estado actual (última actualización: 2026-08-06)
 
-**Adenda en curso: Categorías (código/ícono/color/imagen/orden), código
-completo, dos incidentes reales encontrados y corregidos en la
-verificación (permisos de rol y `order` sin backfill, ambos por
-`$setOnInsert` en `apps/api/src/db/seed.ts`), pendiente de que el
-usuario corra `pnpm --filter @stock-c/api seed` de nuevo y verifique en
-navegador que las flechas ▲/▼ ya reordenan.** Fases 1-11 aprobadas.
-Después de esta adenda sigue la **Fase 12 — Notificaciones** (orden
-elegido por el usuario).
+**Adenda de Categorías y Fase 12 (Notificaciones) aprobadas y
+commiteadas**, no pusheadas todavía. Fases 1-12 aprobadas. Siguiente:
+**Fase 13 — Configuración general** (sin arrancar, requiere alcance
+nuevo del usuario).
+
+**Fase 12 (Notificaciones) — resumen** (detalle completo en
+[docs/12-notificaciones.md](docs/12-notificaciones.md)): alcance
+confirmado con el usuario — solo 2 disparadores (stock bajo cruzando
+`minStock`, movimiento rechazado al sincronizar offline) y solo
+entrega in-app con polling (sin email/push/WebSockets, no hay infra de
+tiempo real desplegada). Sin worker/cron nuevo: ambos disparadores se
+crean dentro de la transacción existente de
+`stockMovement.service.ts#createMovement()` (Fase 9). Decisión no
+obvia: distinguir un rechazo por sync offline de uno del formulario
+online requiere una señal explícita del cliente (`source: "sync"` en
+el body de `POST /stock-movements`) porque ambos pasan por el mismo
+endpoint — investigado el código de `syncEngine.ts` antes de diseñar,
+no asumido. Lectura (`readBy`) por usuario, no por empresa, porque los
+roles ya asumen varios usuarios activos por compañía. **Incidente real
+durante la verificación en navegador:** probando el camino offline real
+(desconectar, encolar un movimiento, reconectar), aparecieron 3
+notificaciones duplicadas para el mismo rechazo — a diferencia de un
+movimiento exitoso (protegido por `clientMutationId`, Fase 9), un
+rechazo no dejaba rastro que evitara que reintentos concurrentes del
+motor de sync (agravado por `StrictMode` de React en desarrollo)
+crearan cada uno su propia notificación. Fix: `Notification` suma
+`clientMutationId?` con el mismo patrón de índice único-y-opcional que
+`Category.code` (`partialFilterExpression`), y `createNotification()`
+absorbe el error de duplicado. 67 tests de backend en verde (57
+previos + 10 nuevos).
 
 **Descartado:** el usuario había propuesto reemplazar los datos de
 ejemplo de ferretería por un árbol de categorías/productos de rubro
@@ -210,12 +232,18 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   real, no hay object storage en el proyecto); `order` con flechas
   ▲/▼, no drag-and-drop; único índice único-y-opcional del proyecto usa
   `partialFilterExpression`, no `sparse` (ver incidente real arriba).
+- Notificaciones (Fase 12): solo 2 disparadores (stock bajo cruzando
+  `minStock`, movimiento rechazado al sincronizar offline); solo in-app
+  con polling (sin email/push/WebSockets); sin worker/cron nuevo, ambos
+  disparadores viven dentro de `createMovement()` (Fase 9); lectura
+  (`readBy`) por usuario; rechazo distinguido de uno online vía
+  `source: "sync"` en el body; notificaciones deduplicadas por
+  `clientMutationId`.
 
-**Próximo paso inmediato:** verificación en navegador y aprobación del
-usuario para cerrar la adenda de Categorías — abrir `/categorias`,
-crear/editar una categoría con código/ícono/color/imagen, confirmar que
-un código repetido se rechaza, y probar las flechas ▲/▼ para reordenar
-hermanas. Después de aprobada, sigue la **Fase 12 — Notificaciones**.
+**Próximo paso inmediato:** definir alcance de la **Fase 13 —
+Configuración general** con el usuario (qué entra: ¿datos de la
+empresa, sucursales, preferencias de usuario, algo más?) antes de
+diseñar nada — todavía no se preguntó.
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -277,7 +305,7 @@ accesibilidad WCAG 2.2 AA.
 | 9 | Control de inventario (entradas, salidas, kardex) | ✅ aprobada |
 | 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ✅ aprobada |
 | 11 | Reportes | ✅ aprobada |
-| 12 | Notificaciones | ⚪ pendiente |
+| 12 | Notificaciones | ✅ aprobada |
 | 13 | Configuración general | ⚪ pendiente |
 | 14 | Optimización | ⚪ pendiente |
 | 15 | Deploy | ⚪ pendiente |

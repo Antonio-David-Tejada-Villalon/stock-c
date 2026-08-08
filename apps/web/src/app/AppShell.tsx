@@ -2,6 +2,7 @@ import { Link, Outlet } from "react-router-dom";
 import {
   Avatar,
   Logo,
+  NotificationBell,
   Sidebar,
   SidebarBrand,
   SidebarFooter,
@@ -15,10 +16,12 @@ import {
 import { useAuth } from "../features/auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { SyncStatusBadge } from "../offline/SyncStatusBadge";
+import { useNotifications } from "../features/notifications/useNotifications";
 
 export function AppShell() {
   const { user, accessToken, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const notifications = useNotifications(accessToken);
 
   if (!user) return null;
 
@@ -71,6 +74,13 @@ export function AppShell() {
           </Link>
           <div className="flex items-center gap-3">
             <SyncStatusBadge accessToken={accessToken} />
+            <NotificationBell
+              unreadCount={notifications.unreadCount}
+              items={notifications.items}
+              loading={notifications.loadingItems}
+              onOpen={() => void notifications.loadItems()}
+              onMarkRead={(id) => void notifications.markRead(id)}
+            />
             <ThemeToggle theme={theme} onToggle={toggleTheme} />
             <UserMenu name={user.name} roleName={user.role.name} onLogout={() => void logout()} />
           </div>

@@ -33,6 +33,11 @@ export const CreateMovementBodySchema = Type.Object({
   reason: Type.Optional(Type.String({ maxLength: 500 })),
   reference: Type.Optional(Type.String({ maxLength: 100 })),
   clientMutationId: Type.String({ minLength: 1, maxLength: 100 }),
+  // Marca que este movimiento viene del outbox offline (Fase 10), no del
+  // formulario online — es la única señal que tiene el servidor para
+  // distinguirlos, ambos pasan por este mismo endpoint. Se usa para decidir
+  // si un rechazo genera una notificación (Fase 12) — ver docs/12, sección 2.
+  source: Type.Optional(Type.Literal("sync")),
 });
 export type CreateMovementBody = Static<typeof CreateMovementBodySchema>;
 
