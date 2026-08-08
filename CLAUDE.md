@@ -2,10 +2,10 @@
 
 ## Estado actual (última actualización: 2026-08-06)
 
-**Adenda de Categorías y Fase 12 (Notificaciones) aprobadas y
-commiteadas**, no pusheadas todavía. Fases 1-12 aprobadas. Siguiente:
-**Fase 13 — Configuración general** (sin arrancar, requiere alcance
-nuevo del usuario).
+**Adenda de Categorías (`e30a299`) y Fase 12 — Notificaciones
+(`33bcca7`) aprobadas y commiteadas**, no pusheadas todavía. Fases 1-12
+aprobadas. Siguiente: **Fase 13 — Configuración general** (sin
+arrancar, requiere alcance nuevo del usuario).
 
 **Fase 12 (Notificaciones) — resumen** (detalle completo en
 [docs/12-notificaciones.md](docs/12-notificaciones.md)): alcance
