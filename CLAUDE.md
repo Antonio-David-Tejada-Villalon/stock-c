@@ -1,13 +1,13 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
-## Estado actual (última actualización: 2026-08-08)
+## Estado actual (última actualización: 2026-08-09)
 
-**Adenda de Categorías (`e30a299`) y Fase 12 — Notificaciones
-(`33bcca7`) aprobadas, commiteadas y pusheadas a `main`.** Fases 1-12
-aprobadas. **Fase 13 — Configuración general: código completo, con una
-ronda de ajustes post-verificación (ver abajo) y una adenda a Fase 9
-(aviso de posible duplicado), pendientes ambas de nueva verificación en
-navegador y aprobación del usuario**, sin commitear.
+**Adenda de Categorías (`e30a299`), Fase 12 — Notificaciones
+(`33bcca7`), Fase 13 — Configuración general y la adenda de Fase 9
+(aviso de posible duplicado) — todas en un solo commit (`d37a2cb`) —
+aprobadas, commiteadas y pusheadas a `main`.** Fases 1-13 aprobadas.
+Próxima fase a definir: 14 (Optimización) o 15 (Deploy), ninguna
+scopeada todavía.
 
 **Fase 13 (Configuración general) — resumen** (detalle completo en
 [docs/13-configuracion-general.md](docs/13-configuracion-general.md)):
@@ -334,27 +334,12 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   te podés quedar sin administrador" protege ahora al último Admin
   activo (`last_admin`, antes `last_owner`).
 
-**Próximo paso inmediato:** nueva verificación en navegador y
-aprobación del usuario, sobre dos frentes a la vez porque salieron de
-la misma ronda de feedback (ninguno se commitea sin esto):
-1. **Fase 13 — Configuración general**, con los ajustes de esta
-   revisión: nombre de empresa reflejado en el sidebar, confirmación de
-   contraseña al crear un usuario + restablecerla al editar, CRUD
-   completo de usuarios y de sucursales (editar email, **eliminar
-   definitivamente** — bloqueado para el único Admin activo y para la
-   sucursal activa, respectivamente), paleta de Apariencia ampliada con
-   vista previa en vivo, campos de Logo/Favicon, y el rol Admin único
-   (probar con las credenciales de prueba ya creadas:
-   `admin@ferreteria-demo.test` / `operador@ferreteria-demo.test` /
-   `visor@ferreteria-demo.test`, contraseña `Prueba-2026!`).
-2. **Adenda de Fase 9 — aviso de posible duplicado**: con dos usuarios
-   distintos, registrar el mismo producto+tipo dentro de 5 minutos y
-   confirmar que aparece en "Con error" de /movimientos con el detalle
-   correcto, y que "Registrar de todos modos" lo resuelve.
-
-El seed ya corrió contra la base real (migró el usuario Owner existente
-a Admin) — falta que el usuario reinicie ambos servidores para levantar
-el código nuevo.
+**Próximo paso inmediato:** Fase 13 y la adenda de Fase 9 ya están
+verificadas en navegador, aprobadas y commiteadas — no hay trabajo de
+código pendiente. Falta decidir con el usuario qué sigue: **Fase 14
+(Optimización)** o **Fase 15 (Deploy)**, ninguna de las dos scopeada
+todavía. Preguntar antes de arrancar cualquiera (regla dura del
+proyecto — nunca avanzar de fase sin aprobación explícita).
 
 ## Modo de trabajo (obligatorio, no negociable)
 
@@ -417,7 +402,7 @@ accesibilidad WCAG 2.2 AA.
 | 10 | Offline First (IndexedDB/Dexie, Service Workers, sync) | ✅ aprobada |
 | 11 | Reportes | ✅ aprobada |
 | 12 | Notificaciones | ✅ aprobada |
-| 13 | Configuración general | ⚪ pendiente |
+| 13 | Configuración general | ✅ aprobada |
 | 14 | Optimización | ⚪ pendiente |
 | 15 | Deploy | ⚪ pendiente |
 
