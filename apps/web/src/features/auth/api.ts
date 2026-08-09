@@ -11,14 +11,15 @@ export class ApiAuthError extends Error {
     public status: number,
     public code: string,
     message: string,
+    public detail?: unknown,
   ) {
     super(message);
   }
 }
 
 async function parseErrorAndThrow(res: Response): Promise<never> {
-  const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-  throw new ApiAuthError(res.status, body.error ?? "unknown_error", body.message ?? "Error inesperado");
+  const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string; detail?: unknown };
+  throw new ApiAuthError(res.status, body.error ?? "unknown_error", body.message ?? "Error inesperado", body.detail);
 }
 
 export interface LoginResult {
@@ -61,4 +62,30 @@ export async function meRequest(accessToken: string): Promise<{ user: AuthUser }
   });
   if (!res.ok) return parseErrorAndThrow(res);
   return res.json();
+}
+
+export async function updateProfileRequest(
+  accessToken: string,
+  input: { name?: string; avatarUrl?: string | null },
+): Promise<{ user: AuthUser }> {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) return parseErrorAndThrow(res);
+  return res.json();
+}
+
+export async function changePasswordRequest(
+  accessToken: string,
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const res = await fetch(`${API_URL}/auth/change-password`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  if (!res.ok) return parseErrorAndThrow(res);
 }

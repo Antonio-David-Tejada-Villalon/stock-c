@@ -38,6 +38,11 @@ export const CreateMovementBodySchema = Type.Object({
   // distinguirlos, ambos pasan por este mismo endpoint. Se usa para decidir
   // si un rechazo genera una notificación (Fase 12) — ver docs/12, sección 2.
   source: Type.Optional(Type.Literal("sync")),
+  // El cliente la manda en `true` cuando el usuario ya vio el aviso de
+  // "posible duplicado" (otro operador registró algo parecido hace poco)
+  // y decidió registrar igual — sin esto, el reintento chocaría contra el
+  // mismo aviso en un loop. Ver docs/13-configuracion-general.md, adenda.
+  confirmDuplicate: Type.Optional(Type.Boolean()),
 });
 export type CreateMovementBody = Static<typeof CreateMovementBodySchema>;
 

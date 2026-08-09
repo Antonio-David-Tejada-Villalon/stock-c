@@ -18,8 +18,8 @@ async function request<T>(path: string, accessToken: string, init?: RequestInit)
     },
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-    throw new ApiAuthError(res.status, body.error ?? "unknown_error", body.message ?? "Error inesperado");
+    const body = (await res.json().catch(() => ({}))) as { error?: string; message?: string; detail?: unknown };
+    throw new ApiAuthError(res.status, body.error ?? "unknown_error", body.message ?? "Error inesperado", body.detail);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -36,6 +36,9 @@ export interface CreateMovementInput {
   /** Presente solo cuando lo manda el motor de sync offline (Fase 10) — ver
    * docs/12-notificaciones.md, sección 2. */
   source?: "sync";
+  /** true cuando el usuario ya confirmó un aviso de "posible duplicado" —
+   * ver docs/13-configuracion-general.md, adenda. */
+  confirmDuplicate?: boolean;
 }
 
 export function createMovement(accessToken: string, input: CreateMovementInput) {

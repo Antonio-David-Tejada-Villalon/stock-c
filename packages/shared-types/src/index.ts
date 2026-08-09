@@ -12,6 +12,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  avatarUrl?: string;
   companyId: string;
   role: {
     id: string;
@@ -39,7 +40,62 @@ export const PERMISSIONS = {
   INVENTORY_MOVEMENT_CREATE: "inventory:movement:create",
   USER_MANAGE: "user:manage",
   ROLE_MANAGE: "role:manage",
+  COMPANY_UPDATE: "company:update",
+  BRANCH_MANAGE: "branch:manage",
 } as const;
+
+// Configuración general (Fase 13) — ver docs/13-configuracion-general.md.
+
+// Mismos 3 nombres que `SYSTEM_ROLES` en `apps/api/src/db/models/role.model.ts`
+// — duplicado deliberado (ese archivo importa mongoose, no apto para el
+// cliente) para que el selector de rol del formulario de usuarios no
+// tenga que inventar strings sueltos. Owner se fusionó con Admin (ver
+// docs/13-configuracion-general.md, adenda post-verificación): Admin es
+// el único rol de control total, ya no hay dos roles casi idénticos.
+export const SYSTEM_ROLE_NAMES = ["Admin", "Operador de almacén", "Visor"] as const;
+
+export interface CompanySettings {
+  timezone: string;
+  currency: string;
+  accentColor?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+}
+
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+  taxId?: string;
+  settings: CompanySettings;
+  version: number;
+}
+
+export interface Branch {
+  id: string;
+  name: string;
+  code: string;
+  address?: string;
+  active: boolean;
+  version: number;
+}
+
+export interface BranchListResponse {
+  items: Branch[];
+}
+
+export interface TeamUser {
+  id: string;
+  name: string;
+  email: string;
+  roleName: string;
+  active: boolean;
+  version: number;
+}
+
+export interface TeamUserListResponse {
+  items: TeamUser[];
+}
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
 

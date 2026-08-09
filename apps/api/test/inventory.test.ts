@@ -186,6 +186,91 @@ describe("POST /stock-movements", () => {
   });
 });
 
+describe("Aviso de posible duplicado", () => {
+  let dupProductId: string;
+  let operator2Token: string;
+
+  beforeAll(async () => {
+    const { Company } = await import("../src/db/models/company.model.js");
+    const { Product } = await import("../src/db/models/product.model.js");
+    const { Role } = await import("../src/db/models/role.model.js");
+    const { User } = await import("../src/db/models/user.model.js");
+    const { hashPassword } = await import("../src/modules/auth/password.js");
+
+    const company = await Company.findOne({ slug: "inventory-test-co" });
+    const product = await Product.create({ companyId: company!._id, sku: "INV-DUP", name: "Tornillo", price: "5.00" });
+    dupProductId = product._id.toString();
+
+    const role = await Role.findOne({ name: "Owner", isSystem: true, companyId: null });
+    const passwordHash = await hashPassword(PASSWORD);
+    await User.create({
+      companyId: company!._id,
+      email: "operator2@inventory-test.local",
+      passwordHash,
+      name: "Operator Two",
+      roleId: role!._id,
+      branchRestrictions: [],
+    });
+    operator2Token = await login("operator2@inventory-test.local");
+  });
+
+  it("avisa cuando otro usuario registró el mismo producto y tipo hace poco", async () => {
+    const first = await app.inject({
+      method: "POST",
+      url: "/stock-movements",
+      headers: authHeader(ownerToken),
+      payload: { productId: dupProductId, type: "entrada", quantity: "5", clientMutationId: crypto.randomUUID() },
+    });
+    expect(first.statusCode).toBe(201);
+
+    const second = await app.inject({
+      method: "POST",
+      url: "/stock-movements",
+      headers: authHeader(operator2Token),
+      payload: { productId: dupProductId, type: "entrada", quantity: "5", clientMutationId: crypto.randomUUID() },
+    });
+    expect(second.statusCode).toBe(409);
+    expect(second.json().error).toBe("possible_duplicate");
+    expect(second.json().detail.byUserName).toBe("Owner Test");
+  });
+
+  it("no avisa cuando es el mismo usuario repitiendo la acción", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stock-movements",
+      headers: authHeader(ownerToken),
+      payload: { productId: dupProductId, type: "entrada", quantity: "3", clientMutationId: crypto.randomUUID() },
+    });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("no avisa para un tipo de movimiento distinto", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stock-movements",
+      headers: authHeader(operator2Token),
+      payload: { productId: dupProductId, type: "salida", quantity: "1", clientMutationId: crypto.randomUUID() },
+    });
+    expect(res.statusCode).toBe(201);
+  });
+
+  it("confirmDuplicate:true salta el aviso y registra igual", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/stock-movements",
+      headers: authHeader(operator2Token),
+      payload: {
+        productId: dupProductId,
+        type: "entrada",
+        quantity: "5",
+        clientMutationId: crypto.randomUUID(),
+        confirmDuplicate: true,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+  });
+});
+
 describe("GET /stock-movements (kardex)", () => {
   it("pages through a product's kardex ordered by sequence, without gaps or repeats", async () => {
     const seenSequences: number[] = [];

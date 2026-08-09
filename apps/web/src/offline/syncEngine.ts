@@ -101,12 +101,18 @@ export async function pushOutbox(accessToken: string): Promise<void> {
         reference: movement.reference,
         clientMutationId: movement.clientMutationId,
         source: "sync",
+        confirmDuplicate: movement.confirmDuplicate,
       });
       await db.outboxMovements.delete(movement.localId);
     } catch (err) {
       if (err instanceof ApiAuthError) {
         await applyOptimisticDelta(movement.productId, -computeDelta(movement.type, movement.quantity));
-        await db.outboxMovements.update(movement.localId, { status: "failed", errorMessage: err.message });
+        await db.outboxMovements.update(movement.localId, {
+          status: "failed",
+          errorMessage: err.message,
+          errorCode: err.code,
+          errorDetail: err.detail as OutboxMovement["errorDetail"],
+        });
       } else {
         // No llegó a responder el servidor (sin red) — reintenta en la próxima sync.
         await db.outboxMovements.update(movement.localId, { status: "pending" });
@@ -119,7 +125,16 @@ export async function retryFailedMovement(localId: number): Promise<void> {
   const movement = await db.outboxMovements.get(localId);
   if (!movement) return;
   await applyOptimisticDelta(movement.productId, computeDelta(movement.type, movement.quantity));
-  await db.outboxMovements.update(localId, { status: "pending", errorMessage: undefined });
+  await db.outboxMovements.update(localId, {
+    status: "pending",
+    errorMessage: undefined,
+    errorCode: undefined,
+    errorDetail: undefined,
+    // Reintentar después de un aviso de posible duplicado significa que
+    // el usuario ya lo vio y decidió registrar igual — no debe volver a
+    // chocar contra el mismo aviso.
+    confirmDuplicate: movement.errorCode === "possible_duplicate" ? true : movement.confirmDuplicate,
+  });
 }
 
 export async function discardFailedMovement(localId: number): Promise<void> {

@@ -1,6 +1,6 @@
 /**
  * Seed de desarrollo: crea una empresa, una sucursal, los roles de sistema
- * y un usuario Owner para poder loguearse. Fase 5 no incluye una pantalla
+ * y un usuario Admin para poder loguearse. Fase 5 no incluye una pantalla
  * de registro público — ver docs/05-autenticacion.md, sección 1.
  *
  * Uso: pnpm --filter @stock-c/api seed
@@ -19,15 +19,16 @@ import { Product } from "./models/product.model.js";
 import { hashPassword } from "../modules/auth/password.js";
 
 const DEV_COMPANY_SLUG = "ferreteria-demo";
-const DEV_OWNER_EMAIL = "owner@ferreteria-demo.test";
-const DEV_OWNER_PASSWORD = "cambiar-esta-clave-123";
+// El email se mantiene igual que cuando este usuario tenía el rol Owner
+// (ya fusionado con Admin) para no romper el login que ya venías usando.
+const DEV_ADMIN_EMAIL = "owner@ferreteria-demo.test";
+const DEV_ADMIN_PASSWORD = "cambiar-esta-clave-123";
 
 async function ensureSystemRoles() {
   const allPermissions = Object.values(PERMISSIONS);
 
   const specs = [
-    { name: SYSTEM_ROLES.OWNER, permissions: allPermissions },
-    { name: SYSTEM_ROLES.ADMIN, permissions: allPermissions.filter((p) => p !== PERMISSIONS.ROLE_MANAGE) },
+    { name: SYSTEM_ROLES.ADMIN, permissions: allPermissions },
     {
       name: SYSTEM_ROLES.WAREHOUSE_OPERATOR,
       permissions: [PERMISSIONS.INVENTORY_MOVEMENT_CREATE, PERMISSIONS.PRODUCT_UPDATE],
@@ -49,6 +50,24 @@ async function ensureSystemRoles() {
     );
     roles.set(spec.name, role._id.toString());
   }
+
+  // Owner se fusionó con Admin (Owner y Admin eran casi idénticos —
+  // Admin ahora tiene todos los permisos, incluido el que antes era
+  // exclusivo de Owner). Cualquier usuario que haya quedado con el rol
+  // "Owner" de una corrida anterior del seed se migra a Admin acá, y el
+  // rol viejo se borra — así no quedan usuarios reales apuntando a un
+  // rol que ya no existe en el selector.
+  const legacyOwnerRole = await Role.findOne({ companyId: null, name: "Owner", isSystem: true });
+  if (legacyOwnerRole) {
+    const { modifiedCount } = await User.updateMany(
+      { roleId: legacyOwnerRole._id },
+      { $set: { roleId: roles.get(SYSTEM_ROLES.ADMIN) } },
+    ).setOptions({ allowCrossTenant: true });
+    if (modifiedCount > 0) console.log(`Migrados ${modifiedCount} usuario(s) de Owner a Admin`);
+    await Role.deleteOne({ _id: legacyOwnerRole._id });
+    console.log("Rol de sistema 'Owner' eliminado (fusionado con Admin)");
+  }
+
   return roles;
 }
 
@@ -264,26 +283,26 @@ async function main() {
   await ensureProducts(company._id, categories, brands, units);
   console.log("Categorías, marcas, unidades y productos de ejemplo listos");
 
-  const existingOwner = await User.findOne({ email: DEV_OWNER_EMAIL }).setOptions({
+  const existingAdmin = await User.findOne({ email: DEV_ADMIN_EMAIL }).setOptions({
     allowCrossTenant: true,
   });
 
-  if (existingOwner) {
-    console.log("El usuario owner ya existe:", DEV_OWNER_EMAIL);
+  if (existingAdmin) {
+    console.log("El usuario admin ya existe:", DEV_ADMIN_EMAIL);
   } else {
-    const passwordHash = await hashPassword(DEV_OWNER_PASSWORD);
+    const passwordHash = await hashPassword(DEV_ADMIN_PASSWORD);
     await User.create({
       companyId: company._id,
-      email: DEV_OWNER_EMAIL,
+      email: DEV_ADMIN_EMAIL,
       passwordHash,
-      name: "Owner Demo",
-      roleId: roles.get(SYSTEM_ROLES.OWNER),
+      name: "Admin Demo",
+      roleId: roles.get(SYSTEM_ROLES.ADMIN),
       branchRestrictions: [],
     });
-    console.log("\nUsuario owner creado:");
-    console.log(`  email:    ${DEV_OWNER_EMAIL}`);
-    console.log(`  password: ${DEV_OWNER_PASSWORD}`);
-    console.log("  (cambiar esta contraseña en cuanto exista una pantalla de gestión de usuarios)");
+    console.log("\nUsuario admin creado:");
+    console.log(`  email:    ${DEV_ADMIN_EMAIL}`);
+    console.log(`  password: ${DEV_ADMIN_PASSWORD}`);
+    console.log("  (cambiar esta contraseña desde Configuración > Usuarios > Mi perfil)");
   }
 
   await mongoose.disconnect();

@@ -13,6 +13,9 @@ interface AuthState {
 interface AuthContextValue extends AuthState {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  /** Actualiza el usuario cacheado después de editar el perfil propio
+   * (Fase 13) — evita recargar la página para ver el cambio reflejado. */
+  setUser: (user: AuthUser) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -53,7 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user: null, accessToken: null, status: "unauthenticated" });
   }, []);
 
-  const value = useMemo(() => ({ ...state, login, logout }), [state, login, logout]);
+  const setUser = useCallback((user: AuthUser) => {
+    setState((prev) => ({ ...prev, user }));
+  }, []);
+
+  const value = useMemo(() => ({ ...state, login, logout, setUser }), [state, login, logout, setUser]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

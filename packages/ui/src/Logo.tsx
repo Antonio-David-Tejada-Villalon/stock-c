@@ -38,13 +38,20 @@ export function LogoMark({ size = 24, className }: LogoMarkProps) {
 export interface LogoProps extends LogoMarkProps {
   /** Muestra "CONNECTED INVENTORY" debajo del wordmark (lockup completo). */
   tagline?: boolean;
+  /** Logo propio de la empresa (Fase 13, solo URL) — reemplaza el
+   * isotipo hexagonal de Stock-C cuando está cargado. */
+  imageUrl?: string;
 }
 
 /** Lockup horizontal: isotipo + wordmark "Stock-C", en Inter (--font-heading). */
-export function Logo({ size = 24, tagline = false, className }: LogoProps) {
+export function Logo({ size = 24, tagline = false, className, imageUrl }: LogoProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
-      <LogoMark size={size} />
+      {imageUrl ? (
+        <img src={imageUrl} alt="" className="shrink-0 rounded object-contain" style={{ height: size, width: size }} />
+      ) : (
+        <LogoMark size={size} />
+      )}
       <div className="flex flex-col leading-none">
         <span className="font-heading text-[15px] font-bold text-text">Stock-C</span>
         {tagline && (

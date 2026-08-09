@@ -1,11 +1,78 @@
 # STOCK-C — Plataforma Empresarial de Gestión de Inventario (base ERP)
 
-## Estado actual (última actualización: 2026-08-06)
+## Estado actual (última actualización: 2026-08-08)
 
 **Adenda de Categorías (`e30a299`) y Fase 12 — Notificaciones
-(`33bcca7`) aprobadas y commiteadas**, no pusheadas todavía. Fases 1-12
-aprobadas. Siguiente: **Fase 13 — Configuración general** (sin
-arrancar, requiere alcance nuevo del usuario).
+(`33bcca7`) aprobadas, commiteadas y pusheadas a `main`.** Fases 1-12
+aprobadas. **Fase 13 — Configuración general: código completo, con una
+ronda de ajustes post-verificación (ver abajo) y una adenda a Fase 9
+(aviso de posible duplicado), pendientes ambas de nueva verificación en
+navegador y aprobación del usuario**, sin commitear.
+
+**Fase 13 (Configuración general) — resumen** (detalle completo en
+[docs/13-configuracion-general.md](docs/13-configuracion-general.md)):
+alcance acotado con el usuario antes de diseñar (varias decisiones con
+riesgo arquitectónico) — pantalla `/configuracion` con 5 pestañas:
+**Empresa** (nombre/CUIT/zona horaria/moneda), **Sucursales** (CRUD
+administrativo que mantiene la invariante de Fase 9 de exactamente una
+sucursal activa — activar una desactiva la anterior; multisucursal
+real con selector y stock por sucursal quedó explícitamente fuera,
+requeriría su propia fase — pedido de nuevo en la revisión y rechazado
+otra vez por el mismo motivo, ver "Revisión" en docs/13), **Usuarios**
+(perfil propio + gestión de equipo: el Admin crea usuarios fijando la
+contraseña inicial a mano porque no hay proveedor de email configurado,
+y asigna uno de los 3 roles de sistema ya existentes — sin editor de
+roles/permisos custom), **Apariencia** (tema claro/oscuro + color de
+acento personalizable por empresa — paleta de 16 colores curados en 4
+grupos, todos pre-verificados por WCAG, más vista previa en vivo —
+validado por contraste contra blanco y casi-negro al guardar, reusa la
+misma fórmula que ya descartó el Naranja de marca como `--accent` en la
+adenda de branding; también Logo/Favicon URL), **Datos** (accesos a los
+4 CSV de Reportes + export nuevo de catálogo completo, armado en el
+cliente sin sumar un endpoint). Logo/favicon/ícono de empresa: solo
+URL de texto, mismo criterio que `imageUrl` de Categorías (no hay
+object storage configurado). Guardas de seguridad nuevas: un usuario no
+puede desactivarse a sí mismo ni sacarle el rol Admin al único Admin
+activo de la empresa (ver fusión de roles abajo). 86 tests de backend
+en verde (67 previos + 19 nuevos).
+
+**Revisión post-verificación de Fase 13 (2026-08-08) — resumen**
+(detalle completo en docs/13, sección "Revisión"): el usuario probó las
+5 pestañas y encontró 4 vacíos reales, todos corregidos antes de volver
+a pedir verificación: el nombre de empresa editado no se reflejaba en
+ningún lado (sidebar mostraba un placeholder con el ID, nunca leía el
+nombre real); la contraseña inicial de un usuario nuevo se perdía si el
+admin no la copiaba antes de cerrar el drawer, y no había forma de
+restablecerla después (ahora hay pantalla de confirmación al crear +
+"Restablecer contraseña…" al editar); la paleta de acento pedía ser
+"más profesional" (se amplió a 16 colores + vista previa en vivo, se
+sacó el "recargá para verlo"); Logo/Favicon estaban conectados en el
+backend pero sin ningún campo en pantalla. Ya con "Equipo" andando, se
+pidió además el CRUD completo de usuarios (faltaba Delete y email
+editable) — sumado `DELETE /users/:id` (borrado definitivo, no
+desactivación, con las mismas guardas de "no auto-eliminarse" / "no
+eliminar al último Admin" que ya tenía `update()`) y `email` editable
+en `PATCH /users/:id`. Mismo vacío en Sucursales: sumado
+`DELETE /branches/:id`, bloqueado solo si es la sucursal activa.
+Además, dos decisiones de
+producto separadas surgieron de la misma ronda de feedback: **(1)
+fusión de roles Owner→Admin** (Owner y Admin eran casi idénticos, la
+única diferencia — `role:manage` — no se ejercía en ninguna pantalla;
+ahora Admin es el único rol de control total, `SYSTEM_ROLES` pasa de 4
+a 3 valores, la guarda `last_owner` pasa a `last_admin`, `seed.ts`
+migra usuarios existentes con rol Owner a Admin en cada corrida — ya
+corrido contra la base real de desarrollo); **(2) aviso de "posible
+duplicado"** entre operadores que registran el mismo producto+tipo en
+una ventana de 5 minutos — funcionalidad de inventario (Fase 9), no de
+esta fase, documentada como adenda en
+[docs/09-control-inventario.md](docs/09-control-inventario.md) (incluye
+un conflicto real de arquitectura detectado antes de diseñar: Fase 10
+hace que todo movimiento se encole y sincronice en segundo plano, así
+que el aviso no puede ser un diálogo síncrono antes de guardar — se
+presentaron ambas alternativas y el usuario eligió reusar el mecanismo
+de "Con error" ya construido para `insufficient_stock`, en vez de sumar
+un endpoint nuevo de chequeo en vivo). 95 tests de backend en total
+(91 de Fase 13 tras la revisión + 4 de la adenda de duplicados).
 
 **Fase 12 (Notificaciones) — resumen** (detalle completo en
 [docs/12-notificaciones.md](docs/12-notificaciones.md)): alcance
@@ -211,7 +278,12 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
 - Control de inventario (Fase 9): sucursal única implícita (sin CRUD de
   sucursales todavía); tipos de movimiento entrada/salida/ajuste (sin
   transferencia); stock negativo bloqueado; `ajuste` es el único tipo con
-  `quantity` con signo.
+  `quantity` con signo. Adenda (post-Fase 13): aviso no bloqueante de
+  "posible duplicado" cuando dos usuarios distintos registran mismo
+  producto+tipo en 5 minutos — se resuelve en "Con error" de
+  /movimientos (mismo mecanismo que `insufficient_stock`), no como
+  diálogo síncrono antes de guardar, porque Fase 10 encola todo
+  movimiento y lo sincroniza en segundo plano.
 - Offline First (Fase 10): recorte inicial a Productos (solo lectura) +
   Movimientos (alta en cola vía outbox, siempre, online u offline);
   Categorías/Marcas/Unidades y Panel sin offline todavía; UI de
@@ -239,11 +311,50 @@ preguntar, solo verificar que sigan vigentes si algo no cuadra):
   (`readBy`) por usuario; rechazo distinguido de uno online vía
   `source: "sync"` en el body; notificaciones deduplicadas por
   `clientMutationId`.
+- Configuración general (Fase 13): sucursales con CRUD completo
+  (incluye **eliminar**, bloqueado solo para la sucursal activa) pero
+  **una sola activa a la vez** (activar una desactiva la anterior) —
+  multisucursal real con selector quedó fuera, es su propia fase si se
+  pide; usuarios con CRUD completo (crear, listar,
+  editar nombre/email/rol/activo, restablecer contraseña, **eliminar
+  definitivamente** — a diferencia del resto del sistema, que solo
+  desactiva) sin flujo de invitación por email (el admin fija la
+  contraseña inicial a mano, con pantalla de confirmación al crear y
+  "Restablecer contraseña…" al editar), sin editor de roles custom
+  (solo asigna los 3 roles de sistema existentes); color de acento por
+  empresa con paleta de 16 curados + vista previa en vivo, validado por
+  contraste WCAG en vez de una paleta cerrada; logo/favicon solo URL
+  (sin object storage); export de catálogo armado en el cliente, sin
+  endpoint nuevo.
+- Roles de sistema (adenda sobre Fase 5/13): **Owner se fusionó con
+  Admin** — eran casi idénticos, la única diferencia (`role:manage`) no
+  se ejercía en ninguna pantalla. Quedan 3 roles: Admin (control total),
+  Operador de almacén (`inventory:movement:create` + `product:update`),
+  Visor (solo lectura, ningún permiso de escritura). La guarda "nunca
+  te podés quedar sin administrador" protege ahora al último Admin
+  activo (`last_admin`, antes `last_owner`).
 
-**Próximo paso inmediato:** definir alcance de la **Fase 13 —
-Configuración general** con el usuario (qué entra: ¿datos de la
-empresa, sucursales, preferencias de usuario, algo más?) antes de
-diseñar nada — todavía no se preguntó.
+**Próximo paso inmediato:** nueva verificación en navegador y
+aprobación del usuario, sobre dos frentes a la vez porque salieron de
+la misma ronda de feedback (ninguno se commitea sin esto):
+1. **Fase 13 — Configuración general**, con los ajustes de esta
+   revisión: nombre de empresa reflejado en el sidebar, confirmación de
+   contraseña al crear un usuario + restablecerla al editar, CRUD
+   completo de usuarios y de sucursales (editar email, **eliminar
+   definitivamente** — bloqueado para el único Admin activo y para la
+   sucursal activa, respectivamente), paleta de Apariencia ampliada con
+   vista previa en vivo, campos de Logo/Favicon, y el rol Admin único
+   (probar con las credenciales de prueba ya creadas:
+   `admin@ferreteria-demo.test` / `operador@ferreteria-demo.test` /
+   `visor@ferreteria-demo.test`, contraseña `Prueba-2026!`).
+2. **Adenda de Fase 9 — aviso de posible duplicado**: con dos usuarios
+   distintos, registrar el mismo producto+tipo dentro de 5 minutos y
+   confirmar que aparece en "Con error" de /movimientos con el detalle
+   correcto, y que "Registrar de todos modos" lo resuelve.
+
+El seed ya corrió contra la base real (migró el usuario Owner existente
+a Admin) — falta que el usuario reinicie ambos servidores para levantar
+el código nuevo.
 
 ## Modo de trabajo (obligatorio, no negociable)
 

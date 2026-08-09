@@ -243,3 +243,70 @@ de "stock bajo" configurable — ninguno estaba pedido para esta fase.
 **Podría mejorarse:** el feed general de `/movimientos` no tiene filtro
 por producto en la UI (el backend ya lo soporta vía `?productId=`, solo
 falta exponerlo); nada bloqueante.
+
+## Adenda — Aviso de posible duplicado entre operadores (2026-08-08)
+
+**Objetivo:** con varios operadores de almacén cargando movimientos en
+paralelo, avisar cuando dos personas distintas registran algo que
+parece ser la misma acción real (ej. dos personas anotan la misma
+entrega), sin bloquear a ninguna de las dos si en verdad son cosas
+distintas.
+
+**Decisión de alcance, confirmada con el usuario:** "duplicado" =
+mismo producto + mismo tipo de movimiento (entrada/salida/ajuste) +
+creado por un usuario *distinto* al que está registrando ahora, dentro
+de una ventana de 5 minutos. Es una advertencia, no un bloqueo — el
+operador puede confirmar que es una acción real y distinta.
+
+**Conflicto de arquitectura detectado antes de diseñar (no asumido):**
+el formulario de movimientos (`MovementFormDrawer.tsx`) nunca llama al
+servidor en el momento — desde Fase 10, todo movimiento (online u
+offline) se encola localmente (`queueMovement`) y se envía recién en
+segundo plano vía `pushOutbox`. Esto descarta un diálogo de
+confirmación síncrono *antes* de guardar sin tocar esa arquitectura. Se
+presentaron las dos alternativas al usuario (aviso en vivo antes de
+guardar, con endpoint nuevo y sin cobertura offline vs. aviso
+posterior reusando el mecanismo ya construido); eligió la segunda.
+
+**Diseño:** `createMovement()` (`stockMovement.service.ts`), antes de
+abrir la transacción, busca el `StockMovement` más reciente con mismo
+`companyId`+`branchId`+`productId`+`type`, `createdBy` distinto al
+usuario actual, y `createdAt` dentro de los últimos 5 minutos
+(`DUPLICATE_WINDOW_MS`). Si lo encuentra, tira `InventoryError(
+"possible_duplicate", { byUserName, quantity, createdAt })` — mismo
+patrón de excepción que `insufficient_stock`, no dentro de la
+transacción (es un chequeo asesor, no una invariante dura como el
+balance de stock). El body de creación suma `confirmDuplicate?:
+boolean`: si el cliente ya lo mandó en `true`, el chequeo se saltea —
+así el reintento después de confirmar no vuelve a chocar contra el
+mismo aviso.
+
+Reutiliza exactamente el mecanismo de `insufficient_stock` de Fase 10:
+la respuesta `409 possible_duplicate` (con `detail`) llega recién
+cuando `pushOutbox` sincroniza, el movimiento pasa a "Con error" en
+`/movimientos` con el detalle de quién/cuánto/cuándo, y el botón
+cambia de "Reintentar" a "Registrar de todos modos" cuando el motivo
+es `possible_duplicate` — al tocarlo, `retryFailedMovement()` marca
+`confirmDuplicate: true` en el registro local antes de reintentar.
+
+**Código:** `apps/api/src/modules/inventory/stockMovement.service.ts`
+(`DuplicateMovementDetail`, chequeo, `DUPLICATE_WINDOW_MS`);
+`stockMovement.schemas.ts` suma `confirmDuplicate`;
+`stockMovement.routes.ts` mapea `possible_duplicate` a `409` con
+`detail`. Frontend: `ApiAuthError` (en `features/auth/api.ts`, y la
+copia local de `features/inventory/api.ts`) suma `detail?: unknown`;
+`offline/db.ts` (`OutboxMovement.errorCode`/`errorDetail`/
+`confirmDuplicate`); `offline/syncEngine.ts` (`pushOutbox` guarda el
+detalle del rechazo, `retryFailedMovement` confirma automáticamente si
+el motivo era `possible_duplicate`); `pages/MovementsPage.tsx` (label
+condicional del botón).
+
+**Testing:** 4 tests nuevos en `inventory.test.ts` — avisa entre dos
+usuarios distintos con detalle correcto; no avisa cuando es el mismo
+usuario repitiendo la acción; no avisa para un tipo de movimiento
+distinto; `confirmDuplicate: true` saltea el aviso y registra igual.
+**90 tests de backend en total** (86 tras la revisión de Fase 13 + 4 de
+esta adenda), todos en verde.
+
+_Pendiente: verificación en navegador del flujo real (dos usuarios
+distintos, mismo producto) antes de aprobar esta adenda._

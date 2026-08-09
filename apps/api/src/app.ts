@@ -17,6 +17,9 @@ import { unitRoutes } from "./modules/catalogs/unit.module.js";
 import { inventoryRoutes } from "./modules/inventory/stockMovement.routes.js";
 import { reportRoutes } from "./modules/reports/report.routes.js";
 import { notificationRoutes } from "./modules/notifications/notification.routes.js";
+import { companyRoutes } from "./modules/company/company.routes.js";
+import { branchRoutes } from "./modules/branches/branch.routes.js";
+import { userRoutes } from "./modules/users/user.routes.js";
 
 export interface BuildAppOptions {
   /** Inyección para tests — evita depender de un Redis real. */
@@ -53,6 +56,9 @@ export async function buildApp(options: BuildAppOptions = {}) {
   await app.register(inventoryRoutes);
   await app.register(reportRoutes);
   await app.register(notificationRoutes);
+  await app.register(companyRoutes);
+  await app.register(branchRoutes);
+  await app.register(userRoutes);
 
   return app;
 }

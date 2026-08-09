@@ -2,7 +2,14 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { env } from "../../shared/env.js";
 import { createAuthService, AuthError, type AuthUserView } from "./auth.service.js";
 import { REFRESH_COOKIE_NAME } from "./tokens.js";
-import { LoginBodySchema, type LoginBody } from "./auth.schemas.js";
+import {
+  LoginBodySchema,
+  UpdateOwnProfileBodySchema,
+  ChangePasswordBodySchema,
+  type LoginBody,
+  type UpdateOwnProfileBody,
+  type ChangePasswordBody,
+} from "./auth.schemas.js";
 import { authenticate } from "../../middleware/authenticate.js";
 
 const REFRESH_COOKIE_PATH = "/auth";
@@ -43,6 +50,9 @@ function authErrorToResponse(err: unknown): { status: number; body: { error: str
     }
     if (err.code === "account_disabled") {
       return { status: 403, body: { error: "account_disabled", message: "Cuenta deshabilitada" } };
+    }
+    if (err.code === "wrong_current_password") {
+      return { status: 401, body: { error: "wrong_current_password", message: "La contraseña actual no coincide" } };
     }
     return { status: 401, body: { error: "invalid_refresh", message: "Sesión inválida o expirada" } };
   }
@@ -133,6 +143,32 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.code(401).send({ error: "unauthorized", message: "Usuario no encontrado" });
       }
       return reply.send({ user: toResponseUser(user) });
+    },
+  );
+
+  app.patch<{ Body: UpdateOwnProfileBody }>(
+    "/auth/me",
+    { preHandler: authenticate, schema: { body: UpdateOwnProfileBodySchema } },
+    async (request, reply) => {
+      const user = await authService.updateProfile(request.user.sub, request.body);
+      if (!user) {
+        return reply.code(401).send({ error: "unauthorized", message: "Usuario no encontrado" });
+      }
+      return reply.send({ user: toResponseUser(user) });
+    },
+  );
+
+  app.post<{ Body: ChangePasswordBody }>(
+    "/auth/change-password",
+    { preHandler: authenticate, schema: { body: ChangePasswordBodySchema } },
+    async (request, reply) => {
+      try {
+        await authService.changePassword(request.user.sub, request.body.currentPassword, request.body.newPassword);
+        return reply.code(204).send();
+      } catch (err) {
+        const { status, body } = authErrorToResponse(err);
+        return reply.code(status).send(body);
+      }
     },
   );
 }

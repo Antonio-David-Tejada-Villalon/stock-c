@@ -10,6 +10,7 @@ export const AuthUserSchema = Type.Object({
   id: Type.String(),
   email: Type.String(),
   name: Type.String(),
+  avatarUrl: Type.Optional(Type.String()),
   companyId: Type.String(),
   role: Type.Object({
     id: Type.String(),
@@ -31,3 +32,15 @@ export const RefreshResponseSchema = Type.Object({
 export const MeResponseSchema = Type.Object({
   user: AuthUserSchema,
 });
+
+export const UpdateOwnProfileBodySchema = Type.Object({
+  name: Type.Optional(Type.String({ minLength: 1, maxLength: 200 })),
+  avatarUrl: Type.Optional(Type.Union([Type.Null(), Type.String({ maxLength: 2000 })])),
+});
+export type UpdateOwnProfileBody = Static<typeof UpdateOwnProfileBodySchema>;
+
+export const ChangePasswordBodySchema = Type.Object({
+  currentPassword: Type.String({ minLength: 1 }),
+  newPassword: Type.String({ minLength: 8, maxLength: 200 }),
+});
+export type ChangePasswordBody = Static<typeof ChangePasswordBodySchema>;

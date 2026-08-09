@@ -15,12 +15,14 @@ import {
 } from "@stock-c/ui";
 import { useAuth } from "../features/auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
+import { useCompanyBranding } from "../theme/useCompanyBranding";
 import { SyncStatusBadge } from "../offline/SyncStatusBadge";
 import { useNotifications } from "../features/notifications/useNotifications";
 
 export function AppShell() {
   const { user, accessToken, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const { logoUrl, companyName } = useCompanyBranding();
   const notifications = useNotifications(accessToken);
 
   if (!user) return null;
@@ -29,11 +31,11 @@ export function AppShell() {
     <div className="flex min-h-screen">
       <Sidebar>
         <SidebarBrand>
-          <Logo size={22} />
+          <Logo size={22} imageUrl={logoUrl} />
         </SidebarBrand>
 
         <TenantSwitch
-          companyName={`Empresa ${user.companyId.slice(-4)}`}
+          companyName={companyName ?? `Empresa ${user.companyId.slice(-4)}`}
           avatar={<Avatar name="EM" size="sm" />}
         />
 

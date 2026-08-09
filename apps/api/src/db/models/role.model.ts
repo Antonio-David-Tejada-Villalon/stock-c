@@ -32,7 +32,6 @@ roleSchema.index({ companyId: 1, name: 1 });
 export const Role = model<RoleDocument>("Role", roleSchema);
 
 export const SYSTEM_ROLES = {
-  OWNER: "Owner",
   ADMIN: "Admin",
   WAREHOUSE_OPERATOR: "Operador de almacén",
   VIEWER: "Visor",

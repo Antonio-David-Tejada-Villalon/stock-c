@@ -120,11 +120,13 @@ export function MovementsPage() {
                     <Badge variant={m.type === "salida" ? "warning" : "success"}>{TYPE_LABEL[m.type]}</Badge>
                   </Td>
                   <Td className="text-right font-mono tabular-nums">{formatQty(m.quantity)}</Td>
-                  <Td className="text-danger">{m.errorMessage}</Td>
+                  <Td className={m.errorCode === "possible_duplicate" ? "text-warning" : "text-danger"}>
+                    {m.errorMessage}
+                  </Td>
                   <Td>
                     <div className="flex justify-end gap-3 text-xs">
                       <button type="button" className="text-accent hover:underline" onClick={() => void handleRetry(m.localId)}>
-                        Reintentar
+                        {m.errorCode === "possible_duplicate" ? "Registrar de todos modos" : "Reintentar"}
                       </button>
                       <button type="button" className="text-danger hover:underline" onClick={() => void handleDiscard(m.localId)}>
                         Descartar

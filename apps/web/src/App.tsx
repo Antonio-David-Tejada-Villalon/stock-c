@@ -9,7 +9,7 @@ import { ProductsPage } from "./pages/ProductsPage";
 import { CatalogsPage } from "./pages/CatalogsPage";
 import { MovementsPage } from "./pages/MovementsPage";
 import { ReportsPage } from "./pages/ReportsPage";
-import { ComingSoon } from "./pages/ComingSoon";
+import { ConfiguracionPage } from "./pages/ConfiguracionPage";
 
 export function App() {
   return (
@@ -30,10 +30,7 @@ export function App() {
               <Route path="/categorias" element={<CatalogsPage />} />
               <Route path="/movimientos" element={<MovementsPage />} />
               <Route path="/reportes" element={<ReportsPage />} />
-              <Route
-                path="/configuracion"
-                element={<ComingSoon title="Configuración" phase="Fase 13" />}
-              />
+              <Route path="/configuracion" element={<ConfiguracionPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

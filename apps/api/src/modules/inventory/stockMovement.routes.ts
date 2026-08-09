@@ -12,7 +12,7 @@ import {
   type ListStockLevelsQuery,
 } from "./stockMovement.schemas.js";
 
-function errorToResponse(err: unknown): { status: number; body: { error: string; message: string } } {
+function errorToResponse(err: unknown): { status: number; body: { error: string; message: string; detail?: unknown } } {
   if (err instanceof InventoryError) {
     if (err.code === "not_found") {
       return { status: 404, body: { error: "not_found", message: "Producto no encontrado" } };
@@ -31,6 +31,17 @@ function errorToResponse(err: unknown): { status: number; body: { error: string;
     }
     if (err.code === "reason_required") {
       return { status: 400, body: { error: "reason_required", message: "Un ajuste necesita un motivo" } };
+    }
+    if (err.code === "possible_duplicate") {
+      const d = err.detail!;
+      return {
+        status: 409,
+        body: {
+          error: "possible_duplicate",
+          message: `${d.byUserName} registró ${d.quantity} del mismo producto y tipo hace instantes — podría ser el mismo movimiento.`,
+          detail: d,
+        },
+      };
     }
     return {
       status: 400,

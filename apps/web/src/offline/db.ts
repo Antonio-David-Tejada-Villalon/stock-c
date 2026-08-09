@@ -13,6 +13,12 @@ export interface OutboxMovement {
   createdAt: string;
   status: "pending" | "syncing" | "failed";
   errorMessage?: string;
+  errorCode?: string;
+  errorDetail?: { byUserName: string; quantity: string; createdAt: string };
+  /** Se pone en `true` cuando el usuario confirma "registrar de todos
+   * modos" ante un aviso de posible duplicado — ver
+   * docs/13-configuracion-general.md, adenda post-verificación. */
+  confirmDuplicate?: boolean;
 }
 
 export interface MetaRow {

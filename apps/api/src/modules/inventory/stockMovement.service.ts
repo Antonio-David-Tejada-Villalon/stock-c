@@ -2,10 +2,17 @@ import mongoose, { Types } from "mongoose";
 import { Product, type ProductDocument } from "../../db/models/product.model.js";
 import { StockMovement, type StockMovementDocument } from "../../db/models/stockMovement.model.js";
 import { StockLevel, type StockLevelDocument } from "../../db/models/stockLevel.model.js";
+import { User } from "../../db/models/user.model.js";
 import { resolveActiveBranch, NoActiveBranchError } from "../../db/helpers/resolveActiveBranch.js";
 import { createNotification } from "../notifications/notification.service.js";
 import { addDecimal, compareDecimal } from "../../lib/decimal.js";
 import type { CreateMovementBody, ListMovementsQuery } from "./stockMovement.schemas.js";
+
+export interface DuplicateMovementDetail {
+  byUserName: string;
+  quantity: string;
+  createdAt: string;
+}
 
 export class InventoryError extends Error {
   constructor(
@@ -14,13 +21,24 @@ export class InventoryError extends Error {
       | "no_active_branch"
       | "invalid_quantity"
       | "reason_required"
-      | "insufficient_stock",
+      | "insufficient_stock"
+      | "possible_duplicate",
+    public detail?: DuplicateMovementDetail,
   ) {
     super(code);
   }
 }
 
 const DEFAULT_LIMIT = 20;
+
+// Ventana para el aviso de "posible duplicado" entre operadores distintos
+// (ver docs/13-configuracion-general.md, adenda post-verificación) — no
+// bloquea, es una advertencia: el movimiento ya se guardó de forma
+// optimista (Fase 10) y este chequeo corre recién al sincronizar contra
+// el servidor, así que se resuelve en la sección "Con error" de
+// /movimientos, con el mismo mecanismo de Reintentar/Descartar que
+// insufficient_stock.
+const DUPLICATE_WINDOW_MS = 5 * 60 * 1000;
 
 function toMovementView(doc: StockMovementDocument) {
   return {
@@ -126,6 +144,26 @@ export function createInventoryService() {
       // persiste. El $inc lo resuelve Mongo de forma nativa sobre
       // Decimal128 — ver docs/09-control-inventario.md, sección 2.
       const deltaStr = body.type === "salida" ? `-${body.quantity}` : body.quantity;
+
+      if (!body.confirmDuplicate) {
+        const windowStart = new Date(Date.now() - DUPLICATE_WINDOW_MS);
+        const recent = await StockMovement.findOne({
+          companyId,
+          branchId: branch._id,
+          productId: body.productId,
+          type: body.type,
+          createdBy: { $ne: userId },
+          createdAt: { $gte: windowStart },
+        }).sort({ createdAt: -1 });
+        if (recent) {
+          const byUser = await User.findOne({ companyId, _id: recent.createdBy });
+          throw new InventoryError("possible_duplicate", {
+            byUserName: byUser?.name ?? "otro usuario",
+            quantity: recent.quantity.toString(),
+            createdAt: recent.createdAt.toISOString(),
+          });
+        }
+      }
 
       const session = await mongoose.startSession();
       try {

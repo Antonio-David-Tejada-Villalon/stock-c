@@ -7,7 +7,9 @@ import { generateRefreshToken, hashRefreshToken, REFRESH_TOKEN_TTL_MS } from "./
 import type { AccessTokenPayload } from "../../plugins/jwt.js";
 
 export class AuthError extends Error {
-  constructor(public code: "invalid_credentials" | "invalid_refresh" | "account_disabled") {
+  constructor(
+    public code: "invalid_credentials" | "invalid_refresh" | "account_disabled" | "wrong_current_password",
+  ) {
     super(code);
   }
 }
@@ -16,6 +18,7 @@ export interface AuthUserView {
   id: string;
   email: string;
   name: string;
+  avatarUrl?: string;
   companyId: string;
   role: { id: string; name: string; permissions: string[] };
   branchRestrictions: string[];
@@ -30,6 +33,7 @@ async function loadUserView(userId: string): Promise<AuthUserView | null> {
     id: user._id.toString(),
     email: user.email,
     name: user.name,
+    avatarUrl: user.avatarUrl,
     companyId: user.companyId.toString(),
     role: { id: role._id.toString(), name: role.name, permissions: role.permissions },
     branchRestrictions: user.branchRestrictions.map((id) => id.toString()),
@@ -146,6 +150,37 @@ export function createAuthService(app: FastifyInstance) {
 
     async me(userId: string) {
       return loadUserView(userId);
+    },
+
+    async updateProfile(userId: string, fields: { name?: string; avatarUrl?: string | null }) {
+      const $set: Record<string, unknown> = {};
+      const $unset: Record<string, ""> = {};
+      if (fields.name !== undefined) $set.name = fields.name;
+      if ("avatarUrl" in fields) {
+        if (fields.avatarUrl === null) $unset.avatarUrl = "";
+        else if (fields.avatarUrl !== undefined) $set.avatarUrl = fields.avatarUrl;
+      }
+      await User.updateOne(
+        { _id: userId },
+        { $set, ...(Object.keys($unset).length > 0 ? { $unset } : {}) },
+      ).setOptions({ allowCrossTenant: true });
+      return loadUserView(userId);
+    },
+
+    /** Reautentica con la contraseña actual antes de aceptar la nueva —
+     * una sesión robada sin la contraseña actual no puede tomar la
+     * cuenta. Ver docs/13, sección "Seguridad". */
+    async changePassword(userId: string, currentPassword: string, newPassword: string) {
+      const user = await User.findOne({ _id: userId })
+        .select("+passwordHash")
+        .setOptions({ allowCrossTenant: true });
+      if (!user) throw new AuthError("invalid_refresh");
+
+      const valid = await verifyPassword(user.passwordHash, currentPassword);
+      if (!valid) throw new AuthError("wrong_current_password");
+
+      user.passwordHash = await hashPassword(newPassword);
+      await user.save();
     },
   };
 }
